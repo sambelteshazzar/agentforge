@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Terminal, Mail, Lock, Loader2, Sparkles, ArrowLeft, Check } from "lucide-react";
+import { Terminal, Mail, Lock, Loader2, Sparkles, ArrowLeft, Check, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -45,6 +45,7 @@ const Auth = () => {
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -436,15 +437,26 @@ const Auth = () => {
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-hover:text-primary" />
                         <Input
                           id="password"
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           onFocus={() => setFocusedField("password")}
                           onBlur={() => setFocusedField(null)}
-                          className="pl-10 bg-secondary/30 border-secondary/50 focus:border-primary/50 transition-all duration-300"
+                          className="pl-10 pr-10 bg-secondary/30 border-secondary/50 focus:border-primary/50 transition-all duration-300"
                           disabled={isLoading}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
                       </div>
                     </div>
                     {errors.password && (
