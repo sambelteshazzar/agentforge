@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { agentConfig } from "@/lib/agentConfig";
 import { AgentSettingsDialog, AgentSettings } from "@/components/AgentSettingsDialog";
+import { ExportActions } from "@/components/ExportActions";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
@@ -226,6 +227,7 @@ const AgentWorkspace = () => {
             <p className="text-xs text-muted-foreground">{agent.description}</p>
           </div>
           <div className="flex items-center gap-3">
+            <ExportActions messages={messages} agentName={agent.name} />
             <Button 
               variant="outline" 
               size="sm" 
