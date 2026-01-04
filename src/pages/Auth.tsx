@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Terminal, Mail, Lock, Loader2, Sparkles } from "lucide-react";
+import { Terminal, Mail, Lock, Loader2, Sparkles, ArrowLeft, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -37,10 +37,12 @@ const authSchema = z.object({
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -63,6 +65,38 @@ const Auth = () => {
         description: error instanceof Error ? error.message : "An error occurred",
       });
       setIsGoogleLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      setErrors({ email: "Please enter your email address" });
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      setResetEmailSent(true);
+      toast({
+        title: "Reset email sent!",
+        description: "Check your inbox for the password reset link.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send reset email",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -241,212 +275,262 @@ const Auth = () => {
               </h1>
               <AnimatePresence mode="wait">
                 <motion.p
-                  key={isLogin ? "login" : "signup"}
+                  key={isForgotPassword ? "forgot" : isLogin ? "login" : "signup"}
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.2 }}
                   className="text-sm text-muted-foreground"
                 >
-                  {isLogin ? "Welcome back! Sign in to continue" : "Create your account to get started"}
+                  {isForgotPassword 
+                    ? "Enter your email to reset password" 
+                    : isLogin 
+                      ? "Welcome back! Sign in to continue" 
+                      : "Create your account to get started"}
                 </motion.p>
               </AnimatePresence>
             </div>
           </motion.div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
-            <motion.div 
-              className="space-y-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.4 }}
-            >
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <div className="relative group">
-                <motion.div
-                  className="absolute -inset-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--accent) / 0.1))" }}
-                  animate={focusedField === "email" ? { opacity: 1 } : {}}
-                />
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setFocusedField("email")}
-                    onBlur={() => setFocusedField(null)}
-                    className="pl-10 bg-secondary/30 border-secondary/50 focus:border-primary/50 transition-all duration-300"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-              <AnimatePresence>
-                {errors.email && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="text-xs text-destructive"
-                  >
-                    {errors.email}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </motion.div>
-
-            {/* Password Field */}
-            <motion.div 
-              className="space-y-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.4 }}
-            >
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-              <div className="relative group">
-                <motion.div
-                  className="absolute -inset-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--accent) / 0.1))" }}
-                  animate={focusedField === "password" ? { opacity: 1 } : {}}
-                />
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField("password")}
-                    onBlur={() => setFocusedField(null)}
-                    className="pl-10 bg-secondary/30 border-secondary/50 focus:border-primary/50 transition-all duration-300"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-              <AnimatePresence>
-                {errors.password && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="text-xs text-destructive"
-                  >
-                    {errors.password}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </motion.div>
-
-            {/* Submit Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.4 }}
-            >
-              <Button
-                type="submit"
-                variant="glow"
-                className="w-full h-12 text-base font-medium relative overflow-hidden group"
-                disabled={isLoading}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/10 to-primary/0"
-                  initial={{ x: "-100%" }}
-                  animate={isLoading ? {} : { x: "100%" }}
-                  transition={{ 
-                    repeat: Infinity, 
-                    duration: 2,
-                    ease: "linear",
-                    repeatDelay: 1
-                  }}
-                />
-                <span className="relative flex items-center gap-2">
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      {isLogin ? "Signing in..." : "Creating account..."}
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      {isLogin ? "Sign In" : "Create Account"}
-                    </>
-                  )}
-                </span>
-              </Button>
-            </motion.div>
-          </form>
-
-          {/* Divider */}
-          <motion.div 
-            className="relative my-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.4 }}
-          >
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border/50" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">or</span>
-            </div>
-          </motion.div>
-
-          {/* Google Sign-In Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.4 }}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-12 text-base font-medium bg-white hover:bg-gray-50 text-gray-700 border-gray-300 hover:border-gray-400 transition-all duration-300 group"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading || isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              ) : (
-                <GoogleIcon />
-              )}
-              <span className="ml-2">Continue with Google</span>
-            </Button>
-          </motion.div>
-
-          {/* Toggle Login/Signup */}
-          <motion.div 
-            className="text-center mt-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.4 }}
-          >
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors duration-300 relative group"
-              disabled={isLoading || isGoogleLoading}
-            >
-              <span className="relative">
-                {isLogin
-                  ? "Don't have an account? "
-                  : "Already have an account? "}
-                <span className="text-primary font-medium">
-                  {isLogin ? "Sign up" : "Sign in"}
-                </span>
-              </span>
+          <AnimatePresence mode="wait">
+            {isForgotPassword ? (
               <motion.div
-                className="absolute -bottom-0.5 left-0 right-0 h-px bg-primary origin-left"
-                initial={{ scaleX: 0 }}
-                whileHover={{ scaleX: 1 }}
+                key="forgot-password"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
-              />
-            </button>
-          </motion.div>
+              >
+                {resetEmailSent ? (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                      <Check className="w-8 h-8 text-green-500" />
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2">Check your email</h2>
+                    <p className="text-muted-foreground mb-6">
+                      We've sent a password reset link to <span className="text-foreground font-medium">{email}</span>
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsForgotPassword(false);
+                        setResetEmailSent(false);
+                      }}
+                      className="gap-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to sign in
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email" className="text-sm font-medium">Email</Label>
+                      <div className="relative group">
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                          <Input
+                            id="reset-email"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="pl-10 bg-secondary/30 border-secondary/50 focus:border-primary/50 transition-all duration-300"
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+                      {errors.email && (
+                        <p className="text-xs text-destructive">{errors.email}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <Button
+                        type="submit"
+                        variant="glow"
+                        className="w-full h-12 text-base font-medium"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                            Sending reset link...
+                          </>
+                        ) : (
+                          "Send Reset Link"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full gap-2"
+                        onClick={() => setIsForgotPassword(false)}
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to sign in
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="auth-form"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Email Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                    <div className="relative group">
+                      <motion.div
+                        className="absolute -inset-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--accent) / 0.1))" }}
+                        animate={focusedField === "email" ? { opacity: 1 } : {}}
+                      />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          onFocus={() => setFocusedField("email")}
+                          onBlur={() => setFocusedField(null)}
+                          className="pl-10 bg-secondary/30 border-secondary/50 focus:border-primary/50 transition-all duration-300"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                    {errors.email && (
+                      <p className="text-xs text-destructive">{errors.email}</p>
+                    )}
+                  </div>
+
+                  {/* Password Field */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                      {isLogin && (
+                        <button
+                          type="button"
+                          onClick={() => setIsForgotPassword(true)}
+                          className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative group">
+                      <motion.div
+                        className="absolute -inset-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--accent) / 0.1))" }}
+                        animate={focusedField === "password" ? { opacity: 1 } : {}}
+                      />
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          onFocus={() => setFocusedField("password")}
+                          onBlur={() => setFocusedField(null)}
+                          className="pl-10 bg-secondary/30 border-secondary/50 focus:border-primary/50 transition-all duration-300"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                    {errors.password && (
+                      <p className="text-xs text-destructive">{errors.password}</p>
+                    )}
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    variant="glow"
+                    className="w-full h-12 text-base font-medium relative overflow-hidden group"
+                    disabled={isLoading}
+                  >
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/10 to-primary/0"
+                      initial={{ x: "-100%" }}
+                      animate={isLoading ? {} : { x: "100%" }}
+                      transition={{ 
+                        repeat: Infinity, 
+                        duration: 2,
+                        ease: "linear",
+                        repeatDelay: 1
+                      }}
+                    />
+                    <span className="relative flex items-center gap-2">
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          {isLogin ? "Signing in..." : "Creating account..."}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          {isLogin ? "Sign In" : "Create Account"}
+                        </>
+                      )}
+                    </span>
+                  </Button>
+                </form>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border/50" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+
+                {/* Google Sign-In Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 text-base font-medium bg-white hover:bg-gray-50 text-gray-700 border-gray-300 hover:border-gray-400 transition-all duration-300 group"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  {isGoogleLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <GoogleIcon />
+                  )}
+                  <span className="ml-2">Continue with Google</span>
+                </Button>
+
+                {/* Toggle Login/Signup */}
+                <div className="text-center mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(!isLogin)}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors duration-300"
+                    disabled={isLoading || isGoogleLoading}
+                  >
+                    {isLogin
+                      ? "Don't have an account? "
+                      : "Already have an account? "}
+                    <span className="text-primary font-medium">
+                      {isLogin ? "Sign up" : "Sign in"}
+                    </span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Decorative elements */}
           <motion.div
