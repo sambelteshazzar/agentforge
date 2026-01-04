@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { agentList } from "@/lib/agentConfig";
 import { cn } from "@/lib/utils";
+import { AnimatedDemo } from "@/components/AnimatedDemo";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -159,7 +160,7 @@ const Index = () => {
                 size="lg" 
                 variant="outline" 
                 className="text-lg px-8 py-6"
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => document.getElementById('demo-section')?.scrollIntoView({ behavior: 'smooth' })}
               >
                 Watch Demo
                 <ChevronRight className="w-5 h-5 ml-2" />
@@ -255,7 +256,26 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Agents Section */}
+      {/* Demo Section */}
+      <section id="demo-section" className="py-24 relative">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">
+              See It In
+              <br />
+              <span className="gradient-text">Action</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Watch how AgentForge turns your ideas into production-ready code in seconds.
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto">
+            <AnimatedDemo />
+          </div>
+        </div>
+      </section>
+
       <section id="agents" className="py-24 relative">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
