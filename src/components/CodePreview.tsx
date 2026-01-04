@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Eye, Code, Terminal, Copy, Check, Maximize2, X } from "lucide-react";
+import { Play, Eye, Code, Copy, Check, Maximize2, X, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface CodePreviewProps {
   code: string;
@@ -11,11 +11,128 @@ interface CodePreviewProps {
   copied: boolean;
 }
 
+const generateRunnableCode = (code: string, language: string): string => {
+  const lang = language.toLowerCase();
+  
+  if (["html", "htm"].includes(lang)) {
+    if (code.includes("<html") || code.includes("<!DOCTYPE")) {
+      return code;
+    }
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; }
+  </style>
+</head>
+<body>
+${code}
+</body>
+</html>`;
+  }
+  
+  if (["jsx", "tsx", "javascriptreact", "typescriptreact"].includes(lang)) {
+    return `<!-- Save this as index.html and open in browser -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Preview</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+${code}
+
+// Auto-render the component
+const rootElement = document.getElementById('root');
+const root = ReactDOM.createRoot(rootElement);
+// Try to find and render the main component
+const ComponentToRender = typeof App !== 'undefined' ? App : 
+  typeof Component !== 'undefined' ? Component : null;
+if (ComponentToRender) {
+  root.render(<ComponentToRender />);
+}
+  </script>
+</body>
+</html>`;
+  }
+  
+  if (["python", "py"].includes(lang)) {
+    return `# Python Script
+# Run with: python script.py
+
+${code}`;
+  }
+  
+  if (["javascript", "js"].includes(lang)) {
+    return `// JavaScript
+// Run with: node script.js
+// Or paste in browser console
+
+${code}`;
+  }
+  
+  if (["typescript", "ts"].includes(lang)) {
+    return `// TypeScript
+// Run with: npx ts-node script.ts
+// Or compile first: tsc script.ts && node script.js
+
+${code}`;
+  }
+  
+  if (["bash", "sh", "shell", "zsh"].includes(lang)) {
+    return `#!/bin/bash
+# Run with: bash script.sh
+
+${code}`;
+  }
+  
+  if (["sql"].includes(lang)) {
+    return `-- SQL Script
+-- Run in your database client or terminal
+
+${code}`;
+  }
+  
+  if (["css"].includes(lang)) {
+    return `/* CSS Styles */
+/* Include in HTML: <link rel="stylesheet" href="styles.css"> */
+
+${code}`;
+  }
+  
+  return code;
+};
+
 export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps) => {
   const [showPreview, setShowPreview] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [runnableCopied, setRunnableCopied] = useState(false);
+  const { toast } = useToast();
 
   const previewType = getPreviewType(language);
+
+  const copyRunnable = async () => {
+    const runnableCode = generateRunnableCode(code, language);
+    await navigator.clipboard.writeText(runnableCode);
+    setRunnableCopied(true);
+    setTimeout(() => setRunnableCopied(false), 2000);
+    toast({
+      title: "Runnable code copied",
+      description: "Paste into a file and run in your environment",
+    });
+  };
 
   if (!previewType) {
     return (
@@ -23,7 +140,9 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
         code={code} 
         language={language} 
         onCopy={onCopy} 
-        copied={copied} 
+        copied={copied}
+        onCopyRunnable={copyRunnable}
+        runnableCopied={runnableCopied}
       />
     );
   }
@@ -48,6 +167,7 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
             size="icon"
             className="h-6 w-6"
             onClick={() => setShowPreview(!showPreview)}
+            title={showPreview ? "Show code" : "Show preview"}
           >
             {showPreview ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
           </Button>
@@ -56,11 +176,27 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
             size="icon"
             className="h-6 w-6"
             onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? <X className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCopy}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6" 
+            onClick={onCopy}
+            title="Copy code"
+          >
             {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6" 
+            onClick={copyRunnable}
+            title="Copy as runnable file"
+          >
+            {runnableCopied ? <Check className="w-3 h-3 text-green-500" /> : <Download className="w-3 h-3" />}
           </Button>
         </div>
       </div>
@@ -255,18 +391,35 @@ const TerminalPreview = ({ code }: { code: string }) => {
   );
 };
 
-const BasicCodeBlock = ({ code, language, onCopy, copied }: CodePreviewProps) => (
+interface BasicCodeBlockProps extends CodePreviewProps {
+  onCopyRunnable: () => void;
+  runnableCopied: boolean;
+}
+
+const BasicCodeBlock = ({ code, language, onCopy, copied, onCopyRunnable, runnableCopied }: BasicCodeBlockProps) => (
   <div className="relative group">
     <div className="flex items-center justify-between bg-secondary/80 px-3 py-1.5 rounded-t-lg border-b border-border/50">
       <span className="text-xs font-mono text-muted-foreground">{language}</span>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={onCopy}
-      >
-        {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={onCopy}
+          title="Copy code"
+        >
+          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={onCopyRunnable}
+          title="Copy as runnable file"
+        >
+          {runnableCopied ? <Check className="w-3 h-3 text-green-500" /> : <Download className="w-3 h-3" />}
+        </Button>
+      </div>
     </div>
     <pre className="bg-secondary/50 p-4 rounded-b-lg overflow-x-auto">
       <code className="text-sm font-mono">{code}</code>
