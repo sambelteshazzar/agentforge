@@ -113,7 +113,7 @@ const Index = () => {
                   </Button>
                 </>
               ) : (
-                <Button variant="glow" onClick={() => navigate("/agent/python")}>
+                <Button variant="glow" onClick={() => navigate("/dashboard")}>
                   Go to Dashboard
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
@@ -151,7 +151,7 @@ const Index = () => {
                 size="lg" 
                 variant="glow" 
                 className="text-lg px-8 py-6"
-                onClick={() => navigate(user ? "/agent/python" : "/auth")}
+                onClick={() => navigate(user ? "/dashboard" : "/auth")}
               >
                 <Play className="w-5 h-5 mr-2" />
                 Start Building Free
@@ -323,7 +323,7 @@ const Index = () => {
           </div>
 
           <div className="text-center mt-10">
-            <Button variant="outline" onClick={() => navigate("/agent/python")}>
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
               View All {agentList.length} Agents
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -400,7 +400,7 @@ const Index = () => {
                 size="lg" 
                 variant="glow" 
                 className="text-lg px-10 py-6"
-                onClick={() => navigate(user ? "/agent/python" : "/auth")}
+                onClick={() => navigate(user ? "/dashboard" : "/auth")}
               >
                 Get Started Free
                 <ArrowRight className="w-5 h-5 ml-2" />
