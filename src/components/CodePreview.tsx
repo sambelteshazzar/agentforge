@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Eye, Code, Copy, Check, Maximize2, X, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -233,27 +233,33 @@ interface PreviewRendererProps {
   type: "html" | "react" | "terminal";
 }
 
-const PreviewRenderer = ({ code, type }: PreviewRendererProps) => {
-  if (type === "html") return <HTMLPreview code={code} />;
-  if (type === "react") return <ReactPreview code={code} />;
-  if (type === "terminal") return <TerminalPreview code={code} />;
-  return null;
-};
+const PreviewRenderer = forwardRef<HTMLDivElement, PreviewRendererProps>(({ code, type }, ref) => {
+  return (
+    <div ref={ref} className="w-full h-full">
+      {type === "html" && <HTMLPreview code={code} />}
+      {type === "react" && <ReactPreview code={code} />}
+      {type === "terminal" && <TerminalPreview code={code} />}
+    </div>
+  );
+});
+PreviewRenderer.displayName = "PreviewRenderer";
 
-const HTMLPreview = ({ code }: { code: string }) => {
+const HTMLPreview = forwardRef<HTMLIFrameElement, { code: string }>(({ code }, ref) => {
   const fullHtml = code.includes("<html") || code.includes("<!DOCTYPE") 
     ? code 
     : `<!DOCTYPE html><html><head><style>body{font-family:system-ui,sans-serif;padding:16px;}</style></head><body>${code}</body></html>`;
 
   return (
     <iframe
+      ref={ref}
       srcDoc={fullHtml}
       className="w-full h-full border-0"
       sandbox="allow-scripts"
       title="HTML Preview"
     />
   );
-};
+});
+HTMLPreview.displayName = "HTMLPreview";
 
 const ReactPreview = ({ code }: { code: string }) => {
   const [error, setError] = useState<string | null>(null);
@@ -289,7 +295,7 @@ const ReactLivePreview = ({ code, onError }: { code: string; onError: (e: string
   const [LivePreview, setLivePreview] = useState<any>(null);
   const [LiveError, setLiveError] = useState<any>(null);
 
-  useState(() => {
+  useEffect(() => {
     import("react-live").then((mod) => {
       setLiveProvider(() => mod.LiveProvider);
       setLivePreview(() => mod.LivePreview);
@@ -297,7 +303,7 @@ const ReactLivePreview = ({ code, onError }: { code: string; onError: (e: string
     }).catch(() => {
       onError("Failed to load preview engine");
     });
-  });
+  }, [onError]);
 
   if (!LiveProvider) {
     return (
@@ -315,7 +321,7 @@ const ReactLivePreview = ({ code, onError }: { code: string; onError: (e: string
   );
 };
 
-const TerminalPreview = ({ code }: { code: string }) => {
+const TerminalPreview = forwardRef<HTMLDivElement, { code: string }>(({ code }, ref) => {
   const [output, setOutput] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -323,13 +329,11 @@ const TerminalPreview = ({ code }: { code: string }) => {
     setIsRunning(true);
     setOutput([]);
 
-    // Parse code and simulate output
     const lines = code.split("\n").filter(l => l.trim());
     let outputLines: string[] = [];
 
     lines.forEach((line, index) => {
       setTimeout(() => {
-        // Simulate different command outputs
         if (line.startsWith("#") || line.startsWith("//")) {
           // Comments - skip
         } else if (line.includes("print(") || line.includes("console.log(")) {
@@ -358,7 +362,7 @@ const TerminalPreview = ({ code }: { code: string }) => {
   };
 
   return (
-    <div className="w-full h-full bg-gray-900 text-green-400 font-mono text-sm flex flex-col">
+    <div ref={ref} className="w-full h-full bg-gray-900 text-green-400 font-mono text-sm flex flex-col">
       <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 border-b border-gray-700">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -389,7 +393,8 @@ const TerminalPreview = ({ code }: { code: string }) => {
       </div>
     </div>
   );
-};
+});
+TerminalPreview.displayName = "TerminalPreview";
 
 interface BasicCodeBlockProps extends CodePreviewProps {
   onCopyRunnable: () => void;
