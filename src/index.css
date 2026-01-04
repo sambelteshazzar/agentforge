@@ -65,6 +65,17 @@
     --ruby: 350 75% 55%;
     --typescript: 210 90% 60%;
     --swift: 15 90% 60%;
+    --kotlin: 270 70% 60%;
+    --php: 240 50% 60%;
+    --scala: 0 75% 55%;
+    --elixir: 280 60% 55%;
+    --haskell: 270 55% 55%;
+    --csharp: 265 80% 55%;
+    --dart: 195 90% 50%;
+    --lua: 220 70% 55%;
+    --perl: 200 60% 50%;
+    --rlang: 210 70% 50%;
+    --sql: 35 90% 55%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;

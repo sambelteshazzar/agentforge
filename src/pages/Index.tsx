@@ -4,7 +4,7 @@ import { AgentCard } from "@/components/AgentCard";
 import { PipelineVisualization } from "@/components/PipelineVisualization";
 import { TaskCreator } from "@/components/TaskCreator";
 import { ActivityFeed } from "@/components/ActivityFeed";
-import { Code2, FileCode, Container, CheckCircle2, Brain, Cpu, Gem, Terminal, Coffee, Cog, Blocks, FileType, Zap } from "lucide-react";
+import { Code2, FileCode, Container, CheckCircle2, Brain, Cpu, Gem, Terminal, Coffee, Cog, Blocks, FileType, Zap, Smartphone, Globe, FlaskConical, Sparkles, Sigma, Hash, Feather, Moon, Bird, BarChart3, Database } from "lucide-react";
 
 const agents = [
   {
@@ -86,6 +86,94 @@ const agents = [
     status: "idle" as const,
     color: "swift" as const,
     tasks: 1,
+  },
+  {
+    name: "Kotlin Agent",
+    description: "Android development, multiplatform apps, and JVM-based services.",
+    icon: Smartphone,
+    status: "active" as const,
+    color: "kotlin" as const,
+    tasks: 2,
+  },
+  {
+    name: "PHP Agent",
+    description: "Web applications, Laravel/Symfony backends, and WordPress plugins.",
+    icon: Globe,
+    status: "idle" as const,
+    color: "php" as const,
+    tasks: 0,
+  },
+  {
+    name: "Scala Agent",
+    description: "Functional programming, Spark applications, and distributed systems.",
+    icon: FlaskConical,
+    status: "idle" as const,
+    color: "scala" as const,
+    tasks: 1,
+  },
+  {
+    name: "Elixir Agent",
+    description: "Real-time systems, Phoenix web apps, and fault-tolerant services.",
+    icon: Sparkles,
+    status: "active" as const,
+    color: "elixir" as const,
+    tasks: 2,
+  },
+  {
+    name: "Haskell Agent",
+    description: "Pure functional code, type-safe systems, and compiler development.",
+    icon: Sigma,
+    status: "idle" as const,
+    color: "haskell" as const,
+    tasks: 0,
+  },
+  {
+    name: "C# Agent",
+    description: ".NET applications, Unity games, and Windows desktop software.",
+    icon: Hash,
+    status: "active" as const,
+    color: "csharp" as const,
+    tasks: 3,
+  },
+  {
+    name: "Dart Agent",
+    description: "Flutter mobile apps, cross-platform UI, and web applications.",
+    icon: Feather,
+    status: "active" as const,
+    color: "dart" as const,
+    tasks: 4,
+  },
+  {
+    name: "Lua Agent",
+    description: "Game scripting, embedded systems, and configuration scripts.",
+    icon: Moon,
+    status: "idle" as const,
+    color: "lua" as const,
+    tasks: 0,
+  },
+  {
+    name: "Perl Agent",
+    description: "Text processing, system administration, and legacy integrations.",
+    icon: Bird,
+    status: "idle" as const,
+    color: "perl" as const,
+    tasks: 0,
+  },
+  {
+    name: "R Agent",
+    description: "Statistical computing, data analysis, and visualization scripts.",
+    icon: BarChart3,
+    status: "idle" as const,
+    color: "rlang" as const,
+    tasks: 1,
+  },
+  {
+    name: "SQL Agent",
+    description: "Database schemas, queries, migrations, and stored procedures.",
+    icon: Database,
+    status: "active" as const,
+    color: "sql" as const,
+    tasks: 2,
   },
   {
     name: "DevOps Agent",
