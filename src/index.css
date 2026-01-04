@@ -57,6 +57,14 @@
     --devops: 280 70% 60%;
     --verifier: 142 70% 45%;
     --planner: 185 70% 50%;
+    --cpp: 210 80% 55%;
+    --golang: 190 85% 45%;
+    --bash: 120 60% 45%;
+    --java: 15 85% 55%;
+    --rust: 25 80% 50%;
+    --ruby: 350 75% 55%;
+    --typescript: 210 90% 60%;
+    --swift: 15 90% 60%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
