@@ -1,69 +1,10 @@
 import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { AgentInfo } from "@/lib/agentConfig";
 
-interface AgentCardProps {
-  name: string;
-  description: string;
-  icon: LucideIcon;
-  status: "active" | "idle" | "error";
-  color: "python" | "javascript" | "devops" | "verifier" | "planner" | "cpp" | "golang" | "bash" | "java" | "rust" | "ruby" | "typescript" | "swift" | "kotlin" | "php" | "scala" | "elixir" | "haskell" | "csharp" | "dart" | "lua" | "perl" | "rlang" | "sql";
-  tasks?: number;
+interface AgentCardProps extends AgentInfo {
   className?: string;
 }
-
-const colorClasses = {
-  python: "border-python/30 hover:border-python/60",
-  javascript: "border-javascript/30 hover:border-javascript/60",
-  devops: "border-devops/30 hover:border-devops/60",
-  verifier: "border-verifier/30 hover:border-verifier/60",
-  planner: "border-planner/30 hover:border-planner/60",
-  cpp: "border-cpp/30 hover:border-cpp/60",
-  golang: "border-golang/30 hover:border-golang/60",
-  bash: "border-bash/30 hover:border-bash/60",
-  java: "border-java/30 hover:border-java/60",
-  rust: "border-rust/30 hover:border-rust/60",
-  ruby: "border-ruby/30 hover:border-ruby/60",
-  typescript: "border-typescript/30 hover:border-typescript/60",
-  swift: "border-swift/30 hover:border-swift/60",
-  kotlin: "border-kotlin/30 hover:border-kotlin/60",
-  php: "border-php/30 hover:border-php/60",
-  scala: "border-scala/30 hover:border-scala/60",
-  elixir: "border-elixir/30 hover:border-elixir/60",
-  haskell: "border-haskell/30 hover:border-haskell/60",
-  csharp: "border-csharp/30 hover:border-csharp/60",
-  dart: "border-dart/30 hover:border-dart/60",
-  lua: "border-lua/30 hover:border-lua/60",
-  perl: "border-perl/30 hover:border-perl/60",
-  rlang: "border-rlang/30 hover:border-rlang/60",
-  sql: "border-sql/30 hover:border-sql/60",
-};
-
-const iconBgClasses = {
-  python: "bg-python/10 text-python",
-  javascript: "bg-javascript/10 text-javascript",
-  devops: "bg-devops/10 text-devops",
-  verifier: "bg-verifier/10 text-verifier",
-  planner: "bg-planner/10 text-planner",
-  cpp: "bg-cpp/10 text-cpp",
-  golang: "bg-golang/10 text-golang",
-  bash: "bg-bash/10 text-bash",
-  java: "bg-java/10 text-java",
-  rust: "bg-rust/10 text-rust",
-  ruby: "bg-ruby/10 text-ruby",
-  typescript: "bg-typescript/10 text-typescript",
-  swift: "bg-swift/10 text-swift",
-  kotlin: "bg-kotlin/10 text-kotlin",
-  php: "bg-php/10 text-php",
-  scala: "bg-scala/10 text-scala",
-  elixir: "bg-elixir/10 text-elixir",
-  haskell: "bg-haskell/10 text-haskell",
-  csharp: "bg-csharp/10 text-csharp",
-  dart: "bg-dart/10 text-dart",
-  lua: "bg-lua/10 text-lua",
-  perl: "bg-perl/10 text-perl",
-  rlang: "bg-rlang/10 text-rlang",
-  sql: "bg-sql/10 text-sql",
-};
 
 const statusLabels = {
   active: "Active",
@@ -72,19 +13,28 @@ const statusLabels = {
 };
 
 export function AgentCard({
+  id,
   name,
   description,
   icon: Icon,
+  iconBg,
+  borderColor,
   status,
-  color,
   tasks = 0,
   className,
 }: AgentCardProps) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate(`/agent/${id}`);
+  };
+
   return (
     <div
+      onClick={handleClick}
       className={cn(
         "glass-card p-6 transition-all duration-300 hover:scale-[1.02] cursor-pointer group",
-        colorClasses[color],
+        borderColor,
         className
       )}
     >
@@ -92,7 +42,7 @@ export function AgentCard({
         <div
           className={cn(
             "w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110",
-            iconBgClasses[color]
+            iconBg
           )}
         >
           <Icon className="w-6 h-6" />
@@ -115,7 +65,7 @@ export function AgentCard({
           {tasks} {tasks === 1 ? "task" : "tasks"} queued
         </span>
         <span className="text-xs font-mono text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-          View →
+          Open →
         </span>
       </div>
     </div>
