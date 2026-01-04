@@ -14,7 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agent_configurations: {
+        Row: {
+          agent_type: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          settings: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          agent_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          settings?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          agent_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          settings?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          agent_type: string
+          content: string
+          created_at: string
+          id: string
+          role: string
+          task_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          agent_type: string
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          agent_type?: string
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          task_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          agent_type: string
+          created_at: string
+          description: string | null
+          id: string
+          priority: string | null
+          result: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          agent_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          result?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          agent_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          result?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
