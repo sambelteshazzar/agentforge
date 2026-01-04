@@ -1,7 +1,14 @@
-import { Terminal, Settings, Bell } from "lucide-react";
+import { Terminal, Settings, Bell, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { User } from "@supabase/supabase-js";
 
-export function Header() {
+interface HeaderProps {
+  user?: User | null;
+  onSignIn?: () => void;
+  onSignOut?: () => void;
+}
+
+export function Header({ user, onSignIn, onSignOut }: HeaderProps) {
   return (
     <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
@@ -16,7 +23,7 @@ export function Header() {
         </div>
 
         <nav className="hidden md:flex items-center gap-6">
-          <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <a href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Dashboard
           </a>
           <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -37,6 +44,17 @@ export function Header() {
           <Button variant="ghost" size="icon">
             <Settings className="w-5 h-5" />
           </Button>
+          {user ? (
+            <Button variant="outline" size="sm" onClick={onSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
+            </Button>
+          ) : (
+            <Button variant="default" size="sm" onClick={onSignIn}>
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign in
+            </Button>
+          )}
         </div>
       </div>
     </header>
