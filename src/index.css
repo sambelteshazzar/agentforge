@@ -182,4 +182,73 @@
       linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
     background-size: 50px 50px;
   }
+
+  /* Prism.js Syntax Highlighting - Dark Theme */
+  .token.comment,
+  .token.prolog,
+  .token.doctype,
+  .token.cdata {
+    color: #6a737d;
+  }
+
+  .token.punctuation {
+    color: #e1e4e8;
+  }
+
+  .token.property,
+  .token.tag,
+  .token.boolean,
+  .token.number,
+  .token.constant,
+  .token.symbol,
+  .token.deleted {
+    color: #79b8ff;
+  }
+
+  .token.selector,
+  .token.attr-name,
+  .token.string,
+  .token.char,
+  .token.builtin,
+  .token.inserted {
+    color: #9ecbff;
+  }
+
+  .token.operator,
+  .token.entity,
+  .token.url,
+  .language-css .token.string,
+  .style .token.string {
+    color: #e1e4e8;
+  }
+
+  .token.atrule,
+  .token.attr-value,
+  .token.keyword {
+    color: #f97583;
+  }
+
+  .token.function,
+  .token.class-name {
+    color: #b392f0;
+  }
+
+  .token.regex,
+  .token.important,
+  .token.variable {
+    color: #ffab70;
+  }
+
+  .token.important,
+  .token.bold {
+    font-weight: bold;
+  }
+
+  .token.italic {
+    font-style: italic;
+  }
+
+  .token.entity {
+    cursor: help;
+  }
 }
