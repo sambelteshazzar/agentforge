@@ -21,6 +21,7 @@ import {
 import { agentList } from "@/lib/agentConfig";
 import { cn } from "@/lib/utils";
 import { AnimatedDemo } from "@/components/AnimatedDemo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -102,6 +103,7 @@ const Index = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               {!loading && !user ? (
                 <>
                   <Button variant="ghost" onClick={() => navigate("/auth")}>
