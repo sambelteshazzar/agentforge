@@ -55,22 +55,101 @@ const AGENT_PROMPTS: Record<string, string> = {
   planner: `You are an expert Planner Agent specialized in task orchestration, project planning, dependency resolution, and system architecture. You help break down complex projects into manageable tasks and create implementation roadmaps.`,
 };
 
+interface AgentSettings {
+  customInstructions?: string;
+  codingStyle?: "concise" | "verbose" | "balanced";
+  includeComments?: boolean;
+  includeTests?: boolean;
+  includeDocumentation?: boolean;
+  preferredFrameworks?: string;
+  outputFormat?: "code-only" | "explanation-first" | "step-by-step";
+  errorHandling?: "minimal" | "standard" | "comprehensive";
+  namingConvention?: "camelCase" | "snake_case" | "PascalCase" | "kebab-case";
+  templateCode?: string;
+}
+
+function buildSettingsPrompt(settings: AgentSettings): string {
+  const parts: string[] = [];
+
+  if (settings.customInstructions) {
+    parts.push(`CUSTOM INSTRUCTIONS: ${settings.customInstructions}`);
+  }
+
+  if (settings.codingStyle) {
+    const styleDescriptions = {
+      concise: "Write minimal, compact code without unnecessary verbosity.",
+      verbose: "Write detailed code with extensive explanations and comments.",
+      balanced: "Write clear, practical code with appropriate documentation.",
+    };
+    parts.push(`CODING STYLE: ${styleDescriptions[settings.codingStyle]}`);
+  }
+
+  if (settings.includeComments) {
+    parts.push("COMMENTS: Include helpful inline comments explaining the code logic.");
+  } else {
+    parts.push("COMMENTS: Minimize comments, only include essential documentation.");
+  }
+
+  if (settings.includeTests) {
+    parts.push("TESTS: Include unit tests for the generated code.");
+  }
+
+  if (settings.includeDocumentation) {
+    parts.push("DOCUMENTATION: Include comprehensive documentation (docstrings, README sections, etc.).");
+  }
+
+  if (settings.preferredFrameworks) {
+    parts.push(`PREFERRED FRAMEWORKS: Use these when applicable: ${settings.preferredFrameworks}`);
+  }
+
+  if (settings.outputFormat) {
+    const formatDescriptions = {
+      "code-only": "Provide code with minimal explanation.",
+      "explanation-first": "Start with an explanation, then provide the code.",
+      "step-by-step": "Break down the solution into numbered steps with code for each.",
+    };
+    parts.push(`OUTPUT FORMAT: ${formatDescriptions[settings.outputFormat]}`);
+  }
+
+  if (settings.errorHandling) {
+    const errorDescriptions = {
+      minimal: "Basic error handling only.",
+      standard: "Handle common error cases appropriately.",
+      comprehensive: "Include comprehensive error handling for all edge cases.",
+    };
+    parts.push(`ERROR HANDLING: ${errorDescriptions[settings.errorHandling]}`);
+  }
+
+  if (settings.namingConvention) {
+    parts.push(`NAMING CONVENTION: Use ${settings.namingConvention} for variable and function names.`);
+  }
+
+  if (settings.templateCode) {
+    parts.push(`TEMPLATE CODE (use as base when appropriate):\n${settings.templateCode}`);
+  }
+
+  return parts.length > 0 ? "\n\nUSER PREFERENCES:\n" + parts.join("\n") : "";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, agentType } = await req.json();
+    const { messages, agentType, settings } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = AGENT_PROMPTS[agentType] || AGENT_PROMPTS.planner;
+    const basePrompt = AGENT_PROMPTS[agentType] || AGENT_PROMPTS.planner;
+    const settingsPrompt = settings ? buildSettingsPrompt(settings) : "";
+    const systemPrompt = basePrompt + settingsPrompt;
 
     console.log(`Agent chat request for ${agentType} agent with ${messages.length} messages`);
+    console.log(`Settings applied: ${settings ? "yes" : "no"}`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
