@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Loader2, User, Bot, Code2, Copy, Check } from "lucide-react";
+import { ArrowLeft, Send, Loader2, User, Bot, Copy, Check, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { agentConfig } from "@/lib/agentConfig";
+import { AgentSettingsDialog, AgentSettings } from "@/components/AgentSettingsDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,6 +22,8 @@ const AgentWorkspace = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const agent = agentId ? agentConfig[agentId] : null;
@@ -27,6 +31,32 @@ const AgentWorkspace = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (agentId) {
+      loadAgentSettings();
+    }
+  }, [agentId]);
+
+  const loadAgentSettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("agent_configurations")
+        .select("settings")
+        .eq("user_id", user.id)
+        .eq("agent_type", agentId)
+        .maybeSingle();
+
+      if (data?.settings) {
+        setAgentSettings(data.settings as AgentSettings);
+      }
+    } catch (error) {
+      console.error("Error loading agent settings:", error);
+    }
+  };
 
   if (!agent) {
     return (
@@ -61,6 +91,7 @@ const AgentWorkspace = () => {
           body: JSON.stringify({
             messages: [...messages, userMessage],
             agentType: agentId,
+            settings: agentSettings,
           }),
         }
       );
@@ -78,7 +109,6 @@ const AgentWorkspace = () => {
       const decoder = new TextDecoder();
       let buffer = "";
 
-      // Add empty assistant message to update
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
       while (true) {
@@ -114,7 +144,6 @@ const AgentWorkspace = () => {
               });
             }
           } catch {
-            // Incomplete JSON, put back and wait
             buffer = line + "\n" + buffer;
             break;
           }
@@ -127,7 +156,6 @@ const AgentWorkspace = () => {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to send message",
       });
-      // Remove the empty assistant message if there was an error
       setMessages((prev) => {
         if (prev[prev.length - 1]?.role === "assistant" && prev[prev.length - 1]?.content === "") {
           return prev.slice(0, -1);
@@ -193,16 +221,36 @@ const AgentWorkspace = () => {
           <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", agent.iconBg)}>
             <Icon className="w-5 h-5" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="font-semibold">{agent.name}</h1>
             <p className="text-xs text-muted-foreground">{agent.description}</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <span className={cn("status-dot", agent.status === "active" ? "status-active" : "status-idle")} />
-            <span className="text-xs text-muted-foreground font-mono capitalize">{agent.status}</span>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
+            <div className="flex items-center gap-2">
+              <span className={cn("status-dot", agent.status === "active" ? "status-active" : "status-idle")} />
+              <span className="text-xs text-muted-foreground font-mono capitalize">{agent.status}</span>
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Settings indicator */}
+      {agentSettings && (
+        <div className="bg-primary/5 border-b border-primary/20 px-6 py-2">
+          <div className="container mx-auto flex items-center gap-2 text-xs text-primary">
+            <Settings className="w-3 h-3" />
+            <span>Custom settings applied: {agentSettings.codingStyle} style, {agentSettings.outputFormat} output</span>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6 relative">
@@ -213,10 +261,19 @@ const AgentWorkspace = () => {
                 <Icon className="w-10 h-10" />
               </div>
               <h2 className="text-2xl font-bold mb-2">Start a conversation with {agent.name}</h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
+              <p className="text-muted-foreground max-w-md mx-auto mb-4">
                 Describe your project or task, and I'll help you generate code, tests, and documentation.
               </p>
-              <div className="flex flex-wrap gap-2 justify-center mt-6">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setSettingsOpen(true)}
+                className="mb-6"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Customize Agent Settings
+              </Button>
+              <div className="flex flex-wrap gap-2 justify-center">
                 {agent.suggestions?.map((suggestion, i) => (
                   <Button
                     key={i}
@@ -334,6 +391,14 @@ const AgentWorkspace = () => {
           </Button>
         </div>
       </div>
+
+      {/* Settings Dialog */}
+      <AgentSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        agent={agent}
+        onSettingsSaved={(settings) => setAgentSettings(settings)}
+      />
     </div>
   );
 };
