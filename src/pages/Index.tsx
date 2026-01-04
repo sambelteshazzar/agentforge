@@ -4,7 +4,7 @@ import { AgentCard } from "@/components/AgentCard";
 import { PipelineVisualization } from "@/components/PipelineVisualization";
 import { TaskCreator } from "@/components/TaskCreator";
 import { ActivityFeed } from "@/components/ActivityFeed";
-import { Code2, FileCode, Container, CheckCircle2, Brain } from "lucide-react";
+import { Code2, FileCode, Container, CheckCircle2, Brain, Cpu, Gem, Terminal, Coffee, Cog, Blocks, FileType, Zap } from "lucide-react";
 
 const agents = [
   {
@@ -24,12 +24,76 @@ const agents = [
     tasks: 2,
   },
   {
+    name: "TypeScript Agent",
+    description: "Type-safe applications, enterprise-grade APIs, and strongly-typed libraries.",
+    icon: FileType,
+    status: "active" as const,
+    color: "typescript" as const,
+    tasks: 4,
+  },
+  {
+    name: "Go Agent",
+    description: "High-performance services, microservices, CLI tools, and concurrent systems.",
+    icon: Zap,
+    status: "active" as const,
+    color: "golang" as const,
+    tasks: 2,
+  },
+  {
+    name: "Rust Agent",
+    description: "Systems programming, memory-safe code, WebAssembly, and performance-critical apps.",
+    icon: Cog,
+    status: "idle" as const,
+    color: "rust" as const,
+    tasks: 1,
+  },
+  {
+    name: "C++ Agent",
+    description: "Game engines, embedded systems, high-performance computing, and native apps.",
+    icon: Cpu,
+    status: "active" as const,
+    color: "cpp" as const,
+    tasks: 2,
+  },
+  {
+    name: "Java Agent",
+    description: "Enterprise applications, Android apps, Spring services, and distributed systems.",
+    icon: Coffee,
+    status: "idle" as const,
+    color: "java" as const,
+    tasks: 0,
+  },
+  {
+    name: "Bash Agent",
+    description: "Shell scripts, automation tasks, system administration, and deployment scripts.",
+    icon: Terminal,
+    status: "active" as const,
+    color: "bash" as const,
+    tasks: 3,
+  },
+  {
+    name: "Ruby Agent",
+    description: "Rails applications, automation scripts, DSLs, and rapid prototyping.",
+    icon: Gem,
+    status: "idle" as const,
+    color: "ruby" as const,
+    tasks: 0,
+  },
+  {
+    name: "Swift Agent",
+    description: "iOS/macOS apps, server-side Swift, and Apple ecosystem development.",
+    icon: Blocks,
+    status: "idle" as const,
+    color: "swift" as const,
+    tasks: 1,
+  },
+  {
     name: "DevOps Agent",
     description: "CI/CD pipelines, Docker configs, infrastructure manifests, and deployments.",
     icon: Container,
-    status: "idle" as const,
+    status: "active" as const,
     color: "devops" as const,
-    tasks: 0,
+    tasks: 2,
   },
   {
     name: "Verifier Agent",
@@ -97,7 +161,12 @@ const Index = () => {
 
           {/* Agent Cards */}
           <div className="lg:col-span-2">
-            <h3 className="text-lg font-semibold mb-4">Active Agents</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Language Agents</h3>
+              <span className="text-sm text-muted-foreground font-mono">
+                {agents.filter(a => a.status === "active").length}/{agents.length} active
+              </span>
+            </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {agents.map((agent) => (
                 <AgentCard key={agent.name} {...agent} />

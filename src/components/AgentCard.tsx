@@ -6,7 +6,7 @@ interface AgentCardProps {
   description: string;
   icon: LucideIcon;
   status: "active" | "idle" | "error";
-  color: "python" | "javascript" | "devops" | "verifier" | "planner";
+  color: "python" | "javascript" | "devops" | "verifier" | "planner" | "cpp" | "golang" | "bash" | "java" | "rust" | "ruby" | "typescript" | "swift";
   tasks?: number;
   className?: string;
 }
@@ -17,6 +17,14 @@ const colorClasses = {
   devops: "border-devops/30 hover:border-devops/60",
   verifier: "border-verifier/30 hover:border-verifier/60",
   planner: "border-planner/30 hover:border-planner/60",
+  cpp: "border-cpp/30 hover:border-cpp/60",
+  golang: "border-golang/30 hover:border-golang/60",
+  bash: "border-bash/30 hover:border-bash/60",
+  java: "border-java/30 hover:border-java/60",
+  rust: "border-rust/30 hover:border-rust/60",
+  ruby: "border-ruby/30 hover:border-ruby/60",
+  typescript: "border-typescript/30 hover:border-typescript/60",
+  swift: "border-swift/30 hover:border-swift/60",
 };
 
 const iconBgClasses = {
@@ -25,6 +33,14 @@ const iconBgClasses = {
   devops: "bg-devops/10 text-devops",
   verifier: "bg-verifier/10 text-verifier",
   planner: "bg-planner/10 text-planner",
+  cpp: "bg-cpp/10 text-cpp",
+  golang: "bg-golang/10 text-golang",
+  bash: "bg-bash/10 text-bash",
+  java: "bg-java/10 text-java",
+  rust: "bg-rust/10 text-rust",
+  ruby: "bg-ruby/10 text-ruby",
+  typescript: "bg-typescript/10 text-typescript",
+  swift: "bg-swift/10 text-swift",
 };
 
 const statusLabels = {
