@@ -6,7 +6,7 @@ interface AgentCardProps {
   description: string;
   icon: LucideIcon;
   status: "active" | "idle" | "error";
-  color: "python" | "javascript" | "devops" | "verifier" | "planner" | "cpp" | "golang" | "bash" | "java" | "rust" | "ruby" | "typescript" | "swift";
+  color: "python" | "javascript" | "devops" | "verifier" | "planner" | "cpp" | "golang" | "bash" | "java" | "rust" | "ruby" | "typescript" | "swift" | "kotlin" | "php" | "scala" | "elixir" | "haskell" | "csharp" | "dart" | "lua" | "perl" | "rlang" | "sql";
   tasks?: number;
   className?: string;
 }
@@ -25,6 +25,17 @@ const colorClasses = {
   ruby: "border-ruby/30 hover:border-ruby/60",
   typescript: "border-typescript/30 hover:border-typescript/60",
   swift: "border-swift/30 hover:border-swift/60",
+  kotlin: "border-kotlin/30 hover:border-kotlin/60",
+  php: "border-php/30 hover:border-php/60",
+  scala: "border-scala/30 hover:border-scala/60",
+  elixir: "border-elixir/30 hover:border-elixir/60",
+  haskell: "border-haskell/30 hover:border-haskell/60",
+  csharp: "border-csharp/30 hover:border-csharp/60",
+  dart: "border-dart/30 hover:border-dart/60",
+  lua: "border-lua/30 hover:border-lua/60",
+  perl: "border-perl/30 hover:border-perl/60",
+  rlang: "border-rlang/30 hover:border-rlang/60",
+  sql: "border-sql/30 hover:border-sql/60",
 };
 
 const iconBgClasses = {
@@ -41,6 +52,17 @@ const iconBgClasses = {
   ruby: "bg-ruby/10 text-ruby",
   typescript: "bg-typescript/10 text-typescript",
   swift: "bg-swift/10 text-swift",
+  kotlin: "bg-kotlin/10 text-kotlin",
+  php: "bg-php/10 text-php",
+  scala: "bg-scala/10 text-scala",
+  elixir: "bg-elixir/10 text-elixir",
+  haskell: "bg-haskell/10 text-haskell",
+  csharp: "bg-csharp/10 text-csharp",
+  dart: "bg-dart/10 text-dart",
+  lua: "bg-lua/10 text-lua",
+  perl: "bg-perl/10 text-perl",
+  rlang: "bg-rlang/10 text-rlang",
+  sql: "bg-sql/10 text-sql",
 };
 
 const statusLabels = {
