@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Loader2, User, Bot, Copy, Check, Settings } from "lucide-react";
+import { ArrowLeft, Send, Loader2, User, Bot, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { agentConfig } from "@/lib/agentConfig";
 import { AgentSettingsDialog, AgentSettings } from "@/components/AgentSettingsDialog";
 import { ExportActions } from "@/components/ExportActions";
+import { CodePreview } from "@/components/CodePreview";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
@@ -316,26 +317,13 @@ const AgentWorkspace = () => {
                   <div className="space-y-3">
                     {extractCodeBlocks(message.content).map((part, partIndex) => (
                       part.type === "code" ? (
-                        <div key={partIndex} className="relative group">
-                          <div className="flex items-center justify-between bg-secondary/80 px-3 py-1.5 rounded-t-lg border-b border-border/50">
-                            <span className="text-xs font-mono text-muted-foreground">{part.language}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => copyToClipboard(part.content, index * 100 + partIndex)}
-                            >
-                              {copiedIndex === index * 100 + partIndex ? (
-                                <Check className="w-3 h-3" />
-                              ) : (
-                                <Copy className="w-3 h-3" />
-                              )}
-                            </Button>
-                          </div>
-                          <pre className="bg-secondary/50 p-4 rounded-b-lg overflow-x-auto">
-                            <code className="text-sm font-mono">{part.content}</code>
-                          </pre>
-                        </div>
+                        <CodePreview
+                          key={partIndex}
+                          code={part.content}
+                          language={part.language || "plaintext"}
+                          onCopy={() => copyToClipboard(part.content, index * 100 + partIndex)}
+                          copied={copiedIndex === index * 100 + partIndex}
+                        />
                       ) : (
                         <p key={partIndex} className="text-sm whitespace-pre-wrap">{part.content}</p>
                       )
