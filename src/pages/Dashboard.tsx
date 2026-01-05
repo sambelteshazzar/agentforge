@@ -15,7 +15,8 @@ import {
   ArrowRight,
   User as UserIcon,
   Settings,
-  Command
+  Command,
+  Star
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,6 +30,8 @@ import { agentList } from "@/lib/agentConfig";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useFavoriteAgents } from "@/hooks/useFavoriteAgents";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -36,6 +39,7 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { favorites, toggleFavorite, isFavorite } = useFavoriteAgents();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -70,6 +74,10 @@ const Dashboard = () => {
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Separate favorites from regular agents
+  const favoriteAgents = filteredAgents.filter(a => isFavorite(a.id));
+  const regularAgents = filteredAgents.filter(a => !isFavorite(a.id));
 
   const activeAgents = agentList.filter(a => a.status === "active").length;
   const totalAgents = agentList.length;
@@ -229,22 +237,97 @@ const Dashboard = () => {
           </div>
         </motion.div>
 
-        {/* Agents Grid */}
+        {/* Favorite Agents */}
+        {favoriteAgents.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mb-8"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+              <h2 className="text-xl font-semibold">Pinned Agents</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {favoriteAgents.map((agent, index) => (
+                <motion.div
+                  key={agent.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
+                  className={cn(
+                    "glass-card p-5 rounded-xl text-left transition-all duration-300 group relative overflow-hidden border-yellow-500/30",
+                    agent.status === "active" 
+                      ? "hover:border-yellow-500/50 hover:glow-effect cursor-pointer" 
+                      : "opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  <div className="absolute top-3 right-3 flex items-center gap-1">
+                    <FavoriteButton
+                      isFavorite={true}
+                      onToggle={() => toggleFavorite(agent.id)}
+                      size="sm"
+                    />
+                  </div>
+                  
+                  <button
+                    onClick={() => navigate(`/agent/${agent.id}`)}
+                    disabled={agent.status !== "active"}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+                        style={{ backgroundColor: `hsl(var(--primary) / 0.1)` }}
+                      >
+                        <agent.icon className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{agent.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            agent.status === "active" ? "bg-green-500" : "bg-muted-foreground"
+                          )} />
+                          <span className="text-xs text-muted-foreground capitalize">{agent.status}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {agent.description}
+                    </p>
+
+                    {agent.status === "active" && (
+                      <div className="flex items-center text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>Open Agent</span>
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </div>
+                    )}
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* All Agents Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <h2 className="text-xl font-semibold mb-4">Available Agents</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            {favoriteAgents.length > 0 ? "All Agents" : "Available Agents"}
+          </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredAgents.map((agent, index) => (
-              <motion.button
+            {regularAgents.map((agent, index) => (
+              <motion.div
                 key={agent.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
-                onClick={() => navigate(`/agent/${agent.id}`)}
-                disabled={agent.status !== "active"}
                 className={cn(
                   "glass-card p-5 rounded-xl text-left transition-all duration-300 group relative overflow-hidden",
                   agent.status === "active" 
@@ -252,42 +335,56 @@ const Dashboard = () => {
                     : "opacity-60 cursor-not-allowed"
                 )}
               >
-                {agent.status === "active" && (
-                  <div className="absolute top-3 right-3">
+                <div className="absolute top-3 right-3 flex items-center gap-1">
+                  {agent.status === "active" && (
+                    <FavoriteButton
+                      isFavorite={false}
+                      onToggle={() => toggleFavorite(agent.id)}
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100"
+                    />
+                  )}
+                  {agent.status === "active" && (
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-3 mb-3">
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                    style={{ backgroundColor: `hsl(var(--primary) / 0.1)` }}
-                  >
-                    <agent.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{agent.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        agent.status === "active" ? "bg-green-500" : "bg-muted-foreground"
-                      )} />
-                      <span className="text-xs text-muted-foreground capitalize">{agent.status}</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
                 
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                  {agent.description}
-                </p>
-
-                {agent.status === "active" && (
-                  <div className="flex items-center text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span>Open Agent</span>
-                    <ArrowRight className="w-4 h-4 ml-1" />
+                <button
+                  onClick={() => navigate(`/agent/${agent.id}`)}
+                  disabled={agent.status !== "active"}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+                      style={{ backgroundColor: `hsl(var(--primary) / 0.1)` }}
+                    >
+                      <agent.icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{agent.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          agent.status === "active" ? "bg-green-500" : "bg-muted-foreground"
+                        )} />
+                        <span className="text-xs text-muted-foreground capitalize">{agent.status}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </motion.button>
+                  
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                    {agent.description}
+                  </p>
+
+                  {agent.status === "active" && (
+                    <div className="flex items-center text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span>Open Agent</span>
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </div>
+                  )}
+                </button>
+              </motion.div>
             ))}
           </div>
 

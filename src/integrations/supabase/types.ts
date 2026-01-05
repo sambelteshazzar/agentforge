@@ -48,6 +48,7 @@ export type Database = {
         Row: {
           agent_type: string
           content: string
+          conversation_id: string | null
           created_at: string
           id: string
           role: string
@@ -57,6 +58,7 @@ export type Database = {
         Insert: {
           agent_type: string
           content: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
           role: string
@@ -66,6 +68,7 @@ export type Database = {
         Update: {
           agent_type?: string
           content?: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
           role?: string
@@ -74,6 +77,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "chat_messages_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -81,6 +91,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      conversations: {
+        Row: {
+          agent_type: string
+          created_at: string
+          id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_type: string
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_type?: string
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      favorite_agents: {
+        Row: {
+          agent_type: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          agent_type: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          agent_type?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_templates: {
+        Row: {
+          agent_types: string[] | null
+          content: string
+          created_at: string
+          id: string
+          is_global: boolean | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_types?: string[] | null
+          content: string
+          created_at?: string
+          id?: string
+          is_global?: boolean | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_types?: string[] | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_global?: boolean | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       tasks: {
         Row: {

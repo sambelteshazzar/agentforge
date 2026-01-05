@@ -7,9 +7,13 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { agentConfig } from "@/lib/agentConfig";
 import { AgentSettingsDialog, AgentSettings } from "@/components/AgentSettingsDialog";
-import { ExportActions } from "@/components/ExportActions";
 import { CodePreview } from "@/components/CodePreview";
 import { supabase } from "@/integrations/supabase/client";
+import { ConversationHistory } from "@/components/ConversationHistory";
+import { PromptTemplatesDialog } from "@/components/PromptTemplatesDialog";
+import { ExportActions } from "@/components/ExportActions";
+import { useConversations, ChatMessage } from "@/hooks/useConversations";
+import { usePromptTemplates } from "@/hooks/usePromptTemplates";
 
 interface Message {
   role: "user" | "assistant";
@@ -26,7 +30,24 @@ const AgentWorkspace = () => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const {
+    conversations,
+    createConversation,
+    updateConversationTitle,
+    deleteConversation,
+    loadMessages,
+    saveMessage,
+  } = useConversations(agentId);
+
+  const {
+    templates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+  } = usePromptTemplates(agentId);
 
   const agent = agentId ? agentConfig[agentId] : null;
 
@@ -78,6 +99,18 @@ const AgentWorkspace = () => {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+
+    // Create conversation if none exists
+    let convId = currentConversationId;
+    if (!convId && agentId) {
+      convId = await createConversation(agentId, input.trim().slice(0, 50));
+      setCurrentConversationId(convId);
+    }
+
+    // Save user message
+    if (convId && agentId) {
+      await saveMessage(convId, "user", input.trim(), agentId);
+    }
 
     let assistantContent = "";
 
@@ -151,6 +184,11 @@ const AgentWorkspace = () => {
           }
         }
       }
+      
+      // Save assistant message
+      if (convId && agentId && assistantContent) {
+        await saveMessage(convId, "assistant", assistantContent, agentId);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       toast({
@@ -174,6 +212,31 @@ const AgentWorkspace = () => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleSelectConversation = async (conversationId: string) => {
+    setCurrentConversationId(conversationId);
+    const loadedMessages = await loadMessages(conversationId);
+    setMessages(loadedMessages.map(m => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    })));
+  };
+
+  const handleNewConversation = () => {
+    setCurrentConversationId(null);
+    setMessages([]);
+  };
+
+  const handleDeleteConversation = async (id: string) => {
+    await deleteConversation(id);
+    if (id === currentConversationId) {
+      handleNewConversation();
+    }
+  };
+
+  const handleTemplateSelect = (content: string) => {
+    setInput(content);
   };
 
   const copyToClipboard = async (text: string, index: number) => {
@@ -227,7 +290,23 @@ const AgentWorkspace = () => {
             <h1 className="font-semibold">{agent.name}</h1>
             <p className="text-xs text-muted-foreground">{agent.description}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ConversationHistory
+              conversations={conversations}
+              currentConversationId={currentConversationId || undefined}
+              onSelect={handleSelectConversation}
+              onNew={handleNewConversation}
+              onDelete={handleDeleteConversation}
+              onRename={updateConversationTitle}
+            />
+            <PromptTemplatesDialog
+              templates={templates}
+              currentAgentType={agentId}
+              onSelect={handleTemplateSelect}
+              onCreate={createTemplate}
+              onUpdate={updateTemplate}
+              onDelete={deleteTemplate}
+            />
             <ExportActions messages={messages} agentName={agent.name} />
             <Button 
               variant="outline" 
