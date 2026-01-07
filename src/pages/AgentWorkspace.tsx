@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Loader2, User, Bot, Settings } from "lucide-react";
+import { ArrowLeft, Send, Loader2, User, Bot, Settings, Code2, PanelLeftClose, PanelLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { agentConfig } from "@/lib/agentConfig";
 import { AgentSettingsDialog, AgentSettings } from "@/components/AgentSettingsDialog";
 import { CodePreview } from "@/components/CodePreview";
+import { CodeEditor } from "@/components/CodeEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { ConversationHistory } from "@/components/ConversationHistory";
 import { PromptTemplatesDialog } from "@/components/PromptTemplatesDialog";
@@ -31,6 +32,8 @@ const AgentWorkspace = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [showCodeEditor, setShowCodeEditor] = useState(false);
+  const [editorCode, setEditorCode] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -309,6 +312,15 @@ const AgentWorkspace = () => {
             />
             <ExportActions messages={messages} agentName={agent.name} />
             <Button 
+              variant={showCodeEditor ? "default" : "outline"}
+              size="sm" 
+              onClick={() => setShowCodeEditor(!showCodeEditor)}
+              title="Toggle code editor"
+            >
+              <Code2 className="w-4 h-4 mr-2" />
+              Editor
+            </Button>
+            <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setSettingsOpen(true)}
@@ -334,131 +346,163 @@ const AgentWorkspace = () => {
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 relative">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {messages.length === 0 && (
-            <div className="text-center py-16">
-              <div className={cn("w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6", agent.iconBg)}>
-                <Icon className="w-10 h-10" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2">Start a conversation with {agent.name}</h2>
-              <p className="text-muted-foreground max-w-md mx-auto mb-4">
-                Describe your project or task, and I'll help you generate code, tests, and documentation.
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setSettingsOpen(true)}
-                className="mb-6"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Customize Agent Settings
-              </Button>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {agent.suggestions?.map((suggestion, i) => (
-                  <Button
-                    key={i}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setInput(suggestion)}
-                    className="text-xs"
+      {/* Main content area */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Messages Panel */}
+        <div className={cn(
+          "flex-1 flex flex-col overflow-hidden transition-all duration-300",
+          showCodeEditor && "w-1/2"
+        )}>
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.length === 0 && (
+                <div className="text-center py-16">
+                  <div className={cn("w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6", agent.iconBg)}>
+                    <Icon className="w-10 h-10" />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">Start a conversation with {agent.name}</h2>
+                  <p className="text-muted-foreground max-w-md mx-auto mb-4">
+                    Describe your project or task, and I'll help you generate code, tests, and documentation.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setSettingsOpen(true)}
+                    className="mb-6"
                   >
-                    {suggestion}
+                    <Settings className="w-4 h-4 mr-2" />
+                    Customize Agent Settings
                   </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={cn(
-                "flex gap-4",
-                message.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              {message.role === "assistant" && (
-                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", agent.iconBg)}>
-                  <Bot className="w-4 h-4" />
-                </div>
-              )}
-              <div
-                className={cn(
-                  "max-w-[80%] rounded-xl p-4",
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "glass-card"
-                )}
-              >
-                {message.role === "assistant" ? (
-                  <div className="space-y-3">
-                    {extractCodeBlocks(message.content).map((part, partIndex) => (
-                      part.type === "code" ? (
-                        <CodePreview
-                          key={partIndex}
-                          code={part.content}
-                          language={part.language || "plaintext"}
-                          onCopy={() => copyToClipboard(part.content, index * 100 + partIndex)}
-                          copied={copiedIndex === index * 100 + partIndex}
-                        />
-                      ) : (
-                        <p key={partIndex} className="text-sm whitespace-pre-wrap">{part.content}</p>
-                      )
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {agent.suggestions?.map((suggestion, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setInput(suggestion)}
+                        className="text-xs"
+                      >
+                        {suggestion}
+                      </Button>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                )}
-              </div>
-              {message.role === "user" && (
-                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4" />
                 </div>
               )}
-            </div>
-          ))}
 
-          {isLoading && messages[messages.length - 1]?.role === "user" && (
-            <div className="flex gap-4">
-              <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", agent.iconBg)}>
-                <Bot className="w-4 h-4" />
-              </div>
-              <div className="glass-card rounded-xl p-4">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Thinking...</span>
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    "flex gap-4",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {message.role === "assistant" && (
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", agent.iconBg)}>
+                      <Bot className="w-4 h-4" />
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-xl p-4",
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "glass-card"
+                    )}
+                  >
+                    {message.role === "assistant" ? (
+                      <div className="space-y-3">
+                        {extractCodeBlocks(message.content).map((part, partIndex) => (
+                          part.type === "code" ? (
+                            <CodePreview
+                              key={partIndex}
+                              code={part.content}
+                              language={part.language || "plaintext"}
+                              onCopy={() => copyToClipboard(part.content, index * 100 + partIndex)}
+                              copied={copiedIndex === index * 100 + partIndex}
+                            />
+                          ) : (
+                            <p key={partIndex} className="text-sm whitespace-pre-wrap">{part.content}</p>
+                          )
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    )}
+                  </div>
+                  {message.role === "user" && (
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
                 </div>
-              </div>
+              ))}
+
+              {isLoading && messages[messages.length - 1]?.role === "user" && (
+                <div className="flex gap-4">
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", agent.iconBg)}>
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div className="glass-card rounded-xl p-4">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm text-muted-foreground">Thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-          )}
+          </div>
 
-          <div ref={messagesEndRef} />
+          {/* Input */}
+          <div className="border-t border-border/50 bg-background/80 backdrop-blur-xl p-4">
+            <div className="max-w-4xl mx-auto flex gap-3">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={`Ask ${agent.name} anything...`}
+                className="min-h-[60px] max-h-[200px] resize-none bg-secondary/50 border-border/50"
+                disabled={isLoading}
+              />
+              <Button
+                variant="glow"
+                size="icon"
+                className="h-[60px] w-[60px]"
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Input */}
-      <div className="border-t border-border/50 bg-background/80 backdrop-blur-xl p-4 relative">
-        <div className="max-w-4xl mx-auto flex gap-3">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`Ask ${agent.name} anything...`}
-            className="min-h-[60px] max-h-[200px] resize-none bg-secondary/50 border-border/50"
-            disabled={isLoading}
-          />
-          <Button
-            variant="glow"
-            size="icon"
-            className="h-[60px] w-[60px]"
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-          >
-            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </Button>
-        </div>
+        {/* Code Editor Panel */}
+        {showCodeEditor && (
+          <div className="w-1/2 border-l border-border/50 flex flex-col bg-[#1e1e1e]">
+            <div className="flex items-center justify-between px-3 py-2 bg-[#252526] border-b border-[#3c3c3c]">
+              <span className="text-sm font-medium text-foreground">Code Editor</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowCodeEditor(false)}
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex-1">
+              <CodeEditor
+                initialLanguage={agentId || "javascript"}
+                onCodeChange={setEditorCode}
+                className="h-full border-0 rounded-none"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Settings Dialog */}
