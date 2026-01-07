@@ -1,8 +1,37 @@
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect, useRef, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Eye, Code, Copy, Check, Maximize2, X, Download } from "lucide-react";
+import { Play, Eye, Code2, Copy, Check, Maximize2, X, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import Prism from "prismjs";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-rust";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-c";
+import "prismjs/components/prism-cpp";
+import "prismjs/components/prism-csharp";
+import "prismjs/components/prism-ruby";
+import "prismjs/components/prism-php";
+import "prismjs/components/prism-swift";
+import "prismjs/components/prism-kotlin";
+import "prismjs/components/prism-scala";
+import "prismjs/components/prism-haskell";
+import "prismjs/components/prism-lua";
+import "prismjs/components/prism-perl";
+import "prismjs/components/prism-r";
+import "prismjs/components/prism-dart";
+import "prismjs/components/prism-elixir";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-markdown";
 
 interface CodePreviewProps {
   code: string;
@@ -10,6 +39,47 @@ interface CodePreviewProps {
   onCopy: () => void;
   copied: boolean;
 }
+
+const getPrismLanguage = (language: string): string => {
+  const langMap: Record<string, string> = {
+    js: "javascript",
+    ts: "typescript",
+    py: "python",
+    sh: "bash",
+    shell: "bash",
+    zsh: "bash",
+    yml: "yaml",
+    md: "markdown",
+    jsx: "jsx",
+    tsx: "tsx",
+    htm: "html",
+    go: "go",
+    golang: "go",
+    rs: "rust",
+    rb: "ruby",
+    cs: "csharp",
+    kt: "kotlin",
+    hs: "haskell",
+    ex: "elixir",
+    exs: "elixir",
+    r: "r",
+    rlang: "r",
+  };
+  const normalized = language.toLowerCase();
+  return langMap[normalized] || normalized;
+};
+
+const getPreviewType = (language: string): "html" | "react" | "terminal" | null => {
+  const lang = language.toLowerCase();
+  const htmlLangs = ["html", "htm"];
+  const reactLangs = ["jsx", "tsx", "javascriptreact", "typescriptreact"];
+  const terminalLangs = ["bash", "sh", "shell", "zsh", "python", "py", "node", "sql"];
+
+  if (htmlLangs.includes(lang)) return "html";
+  if (reactLangs.includes(lang)) return "react";
+  if (terminalLangs.includes(lang)) return "terminal";
+  return null;
+};
 
 const generateRunnableCode = (code: string, language: string): string => {
   const lang = language.toLowerCase();
@@ -57,7 +127,6 @@ ${code}
 // Auto-render the component
 const rootElement = document.getElementById('root');
 const root = ReactDOM.createRoot(rootElement);
-// Try to find and render the main component
 const ComponentToRender = typeof App !== 'undefined' ? App : 
   typeof Component !== 'undefined' ? Component : null;
 if (ComponentToRender) {
@@ -111,6 +180,52 @@ ${code}`;
 
 ${code}`;
   }
+
+  if (["go", "golang"].includes(lang)) {
+    return `// Go
+// Run with: go run main.go
+
+${code}`;
+  }
+
+  if (["rust", "rs"].includes(lang)) {
+    return `// Rust
+// Run with: cargo run
+// Or compile: rustc main.rs && ./main
+
+${code}`;
+  }
+
+  if (["java"].includes(lang)) {
+    return `// Java
+// Compile: javac Main.java
+// Run: java Main
+
+${code}`;
+  }
+
+  if (["c"].includes(lang)) {
+    return `// C
+// Compile: gcc main.c -o main
+// Run: ./main
+
+${code}`;
+  }
+
+  if (["cpp", "c++"].includes(lang)) {
+    return `// C++
+// Compile: g++ main.cpp -o main
+// Run: ./main
+
+${code}`;
+  }
+
+  if (["ruby", "rb"].includes(lang)) {
+    return `# Ruby
+# Run with: ruby script.rb
+
+${code}`;
+  }
   
   return code;
 };
@@ -119,9 +234,18 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
   const [showPreview, setShowPreview] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [runnableCopied, setRunnableCopied] = useState(false);
+  const codeRef = useRef<HTMLElement>(null);
   const { toast } = useToast();
 
   const previewType = getPreviewType(language);
+  const prismLanguage = getPrismLanguage(language);
+  const lines = code.split("\n");
+
+  useEffect(() => {
+    if (codeRef.current) {
+      Prism.highlightElement(codeRef.current);
+    }
+  }, [code, prismLanguage]);
 
   const copyRunnable = async () => {
     const runnableCode = generateRunnableCode(code, language);
@@ -134,26 +258,15 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
     });
   };
 
-  if (!previewType) {
-    return (
-      <BasicCodeBlock 
-        code={code} 
-        language={language} 
-        onCopy={onCopy} 
-        copied={copied}
-        onCopyRunnable={copyRunnable}
-        runnableCopied={runnableCopied}
-      />
-    );
-  }
-
   return (
     <div className={cn(
-      "rounded-lg border border-border/50 overflow-hidden",
-      isFullscreen && "fixed inset-4 z-50 bg-background"
+      "rounded-lg overflow-hidden bg-[#1a1b26]",
+      isFullscreen && "fixed inset-4 z-50"
     )}>
-      <div className="flex items-center justify-between bg-secondary/80 px-3 py-1.5 border-b border-border/50">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-[#24283b] border-b border-[#414868]">
         <div className="flex items-center gap-2">
+          <Code2 className="w-4 h-4 text-primary" />
           <span className="text-xs font-mono text-muted-foreground">{language}</span>
           {previewType && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary">
@@ -162,15 +275,20 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
           )}
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setShowPreview(!showPreview)}
-            title={showPreview ? "Show code" : "Show preview"}
-          >
-            {showPreview ? <Code className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-          </Button>
+          {previewType && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-6 w-6",
+                showPreview && "bg-primary/20 text-primary"
+              )}
+              onClick={() => setShowPreview(!showPreview)}
+              title={showPreview ? "Show code" : "Show preview"}
+            >
+              {showPreview ? <Code2 className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -187,7 +305,7 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
             onClick={onCopy}
             title="Copy code"
           >
-            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
           </Button>
           <Button 
             variant="ghost" 
@@ -196,37 +314,42 @@ export const CodePreview = ({ code, language, onCopy, copied }: CodePreviewProps
             onClick={copyRunnable}
             title="Copy as runnable file"
           >
-            {runnableCopied ? <Check className="w-3 h-3 text-green-500" /> : <Download className="w-3 h-3" />}
+            {runnableCopied ? <Check className="w-3 h-3 text-success" /> : <Download className="w-3 h-3" />}
           </Button>
         </div>
       </div>
 
-      {showPreview ? (
+      {showPreview && previewType ? (
         <div className={cn("bg-white", isFullscreen ? "h-[calc(100%-40px)]" : "h-[300px]")}>
           <PreviewRenderer code={code} type={previewType} />
         </div>
       ) : (
-        <pre className={cn(
-          "bg-secondary/50 p-4 overflow-auto",
+        <div className={cn(
+          "overflow-auto",
           isFullscreen ? "h-[calc(100%-40px)]" : "max-h-[400px]"
         )}>
-          <code className="text-sm font-mono">{code}</code>
-        </pre>
+          <pre className="p-4 text-sm leading-relaxed m-0">
+            <div className="flex">
+              {/* Line Numbers */}
+              <div className="select-none pr-4 text-right text-[#565f89] font-mono text-xs border-r border-[#414868] mr-4 flex-shrink-0">
+                {lines.map((_, i) => (
+                  <div key={i} className="leading-relaxed">{i + 1}</div>
+                ))}
+              </div>
+              {/* Code */}
+              <code 
+                ref={codeRef}
+                className={`language-${prismLanguage} font-mono text-xs`}
+              >
+                {code}
+              </code>
+            </div>
+          </pre>
+        </div>
       )}
     </div>
   );
 };
-
-function getPreviewType(language: string): "html" | "react" | "terminal" | null {
-  const htmlLangs = ["html", "htm"];
-  const reactLangs = ["jsx", "tsx", "javascriptreact", "typescriptreact"];
-  const terminalLangs = ["bash", "sh", "shell", "zsh", "python", "py", "node", "sql"];
-
-  if (htmlLangs.includes(language.toLowerCase())) return "html";
-  if (reactLangs.includes(language.toLowerCase())) return "react";
-  if (terminalLangs.includes(language.toLowerCase())) return "terminal";
-  return null;
-}
 
 interface PreviewRendererProps {
   code: string;
@@ -279,7 +402,7 @@ const ReactPreview = ({ code }: { code: string }) => {
   return (
     <div className="w-full h-full p-4 overflow-auto">
       {error ? (
-        <div className="text-red-500 text-sm font-mono p-2 bg-red-50 rounded">
+        <div className="text-destructive text-sm font-mono p-2 bg-destructive/10 rounded">
           {error}
         </div>
       ) : (
@@ -290,7 +413,6 @@ const ReactPreview = ({ code }: { code: string }) => {
 };
 
 const ReactLivePreview = ({ code, onError }: { code: string; onError: (e: string | null) => void }) => {
-  // Lazy load react-live to avoid bundle size issues
   const [LiveProvider, setLiveProvider] = useState<any>(null);
   const [LivePreview, setLivePreview] = useState<any>(null);
   const [LiveError, setLiveError] = useState<any>(null);
@@ -334,7 +456,7 @@ const TerminalPreview = forwardRef<HTMLDivElement, { code: string }>(({ code }, 
 
     lines.forEach((line, index) => {
       setTimeout(() => {
-        if (line.startsWith("#") || line.startsWith("//")) {
+        if (line.startsWith("#") || line.startsWith("//") || line.startsWith("--")) {
           // Comments - skip
         } else if (line.includes("print(") || line.includes("console.log(")) {
           const match = line.match(/(?:print|console\.log)\s*\(\s*["'`](.*)["'`]\s*\)/);
@@ -362,18 +484,18 @@ const TerminalPreview = forwardRef<HTMLDivElement, { code: string }>(({ code }, 
   };
 
   return (
-    <div ref={ref} className="w-full h-full bg-gray-900 text-green-400 font-mono text-sm flex flex-col">
-      <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 border-b border-gray-700">
+    <div ref={ref} className="w-full h-full bg-[#1a1b26] text-[#7aa2f7] font-mono text-sm flex flex-col">
+      <div className="flex items-center gap-2 px-3 py-2 bg-[#24283b] border-b border-[#414868]">
         <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <div className="w-3 h-3 rounded-full bg-yellow-500" />
-          <div className="w-3 h-3 rounded-full bg-green-500" />
+          <div className="w-3 h-3 rounded-full bg-destructive" />
+          <div className="w-3 h-3 rounded-full bg-warning" />
+          <div className="w-3 h-3 rounded-full bg-success" />
         </div>
-        <span className="text-gray-400 text-xs flex-1 text-center">Terminal Simulation</span>
+        <span className="text-muted-foreground text-xs flex-1 text-center">Terminal Simulation</span>
         <Button 
           variant="ghost" 
           size="sm" 
-          className="h-6 text-xs text-green-400 hover:text-green-300"
+          className="h-6 text-xs text-[#7aa2f7] hover:text-[#7aa2f7]/80"
           onClick={simulateExecution}
           disabled={isRunning}
         >
@@ -383,7 +505,7 @@ const TerminalPreview = forwardRef<HTMLDivElement, { code: string }>(({ code }, 
       </div>
       <div className="flex-1 p-3 overflow-auto">
         {output.length === 0 ? (
-          <div className="text-gray-500">Click Run to simulate execution</div>
+          <div className="text-muted-foreground">Click Run to simulate execution</div>
         ) : (
           output.map((line, i) => (
             <div key={i} className="leading-relaxed">{line}</div>
@@ -395,39 +517,3 @@ const TerminalPreview = forwardRef<HTMLDivElement, { code: string }>(({ code }, 
   );
 });
 TerminalPreview.displayName = "TerminalPreview";
-
-interface BasicCodeBlockProps extends CodePreviewProps {
-  onCopyRunnable: () => void;
-  runnableCopied: boolean;
-}
-
-const BasicCodeBlock = ({ code, language, onCopy, copied, onCopyRunnable, runnableCopied }: BasicCodeBlockProps) => (
-  <div className="relative group">
-    <div className="flex items-center justify-between bg-secondary/80 px-3 py-1.5 rounded-t-lg border-b border-border/50">
-      <span className="text-xs font-mono text-muted-foreground">{language}</span>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={onCopy}
-          title="Copy code"
-        >
-          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={onCopyRunnable}
-          title="Copy as runnable file"
-        >
-          {runnableCopied ? <Check className="w-3 h-3 text-green-500" /> : <Download className="w-3 h-3" />}
-        </Button>
-      </div>
-    </div>
-    <pre className="bg-secondary/50 p-4 rounded-b-lg overflow-x-auto">
-      <code className="text-sm font-mono">{code}</code>
-    </pre>
-  </div>
-);
