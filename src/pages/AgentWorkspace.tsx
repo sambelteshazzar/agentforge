@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { agentConfig } from "@/lib/agentConfig";
 import { AgentSettingsDialog, AgentSettings } from "@/components/AgentSettingsDialog";
-import { CodePreview } from "@/components/CodePreview";
+import { PrototypePreview } from "@/components/PrototypePreview";
 import { CodeEditor } from "@/components/CodeEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { ConversationHistory } from "@/components/ConversationHistory";
@@ -414,7 +414,7 @@ const AgentWorkspace = () => {
                       <div className="space-y-3">
                         {extractCodeBlocks(message.content).map((part, partIndex) => (
                           part.type === "code" ? (
-                            <CodePreview
+                            <PrototypePreview
                               key={partIndex}
                               code={part.content}
                               language={part.language || "plaintext"}
