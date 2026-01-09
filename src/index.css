@@ -76,6 +76,22 @@
     --perl: 200 60% 50%;
     --rlang: 210 70% 50%;
     --sql: 35 90% 55%;
+    
+    /* UI/UX Agent colors */
+    --uiDesigner: 320 80% 60%;
+    --uxResearcher: 200 75% 55%;
+    --prototyper: 45 95% 55%;
+    --designSystem: 280 70% 60%;
+    --wireframer: 180 60% 50%;
+    --vectorArtist: 340 85% 60%;
+    --layoutEngine: 160 70% 50%;
+    --motionDesigner: 25 90% 55%;
+    --themeBuilder: 300 70% 55%;
+    --figmaConnect: 260 80% 60%;
+    --a11yExpert: 140 70% 50%;
+    --responsiveDesigner: 220 75% 60%;
+    --designWorkflow: 190 80% 50%;
+    --aiDesignAssist: 270 85% 65%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
