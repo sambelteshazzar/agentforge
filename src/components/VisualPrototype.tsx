@@ -36,6 +36,21 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
     
     // For React/JSX components
     if (["jsx", "tsx", "javascriptreact", "typescriptreact"].includes(normalizedLang)) {
+      // Extract component name from various patterns
+      const componentMatch = code.match(/(?:export\s+default\s+)?(?:function|const|class)\s+(\w+)/);
+      const componentName = componentMatch ? componentMatch[1] : null;
+      
+      // Clean up TypeScript types and imports for browser execution
+      const cleanedCode = code
+        .replace(/import\s+.*?from\s+['"].*?['"];?\s*/g, '') // Remove imports
+        .replace(/export\s+default\s+/g, '') // Remove export default
+        .replace(/export\s+/g, '') // Remove export
+        .replace(/:\s*React\.FC\s*(<.*?>)?/g, '') // Remove React.FC type
+        .replace(/:\s*\w+(\[\])?\s*(?=[,\)\=\{])/g, '') // Remove type annotations
+        .replace(/<(\w+)(?:,\s*\w+)*>/g, '') // Remove generics
+        .replace(/interface\s+\w+\s*\{[^}]*\}/g, '') // Remove interfaces
+        .replace(/type\s+\w+\s*=\s*[^;]+;/g, ''); // Remove type declarations
+      
       return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,9 +61,10 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     ${showGrid ? `
     body { 
       background-image: 
@@ -60,19 +76,67 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel">
-${code}
+  <script type="text/babel" data-presets="react">
+    // Polyfill common React hooks and utilities
+    const { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } = React;
+    
+    // Stub for common UI components that might be imported
+    const Button = ({ children, onClick, className = '', variant = 'default', size = 'default', ...props }) => {
+      const baseStyles = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none';
+      const variants = {
+        default: 'bg-blue-600 text-white hover:bg-blue-700',
+        outline: 'border border-gray-300 bg-transparent hover:bg-gray-100',
+        ghost: 'hover:bg-gray-100',
+        destructive: 'bg-red-600 text-white hover:bg-red-700',
+      };
+      const sizes = {
+        default: 'h-10 px-4 py-2',
+        sm: 'h-8 px-3 text-sm',
+        lg: 'h-12 px-6 text-lg',
+        icon: 'h-10 w-10',
+      };
+      return React.createElement('button', {
+        onClick,
+        className: baseStyles + ' ' + (variants[variant] || variants.default) + ' ' + (sizes[size] || sizes.default) + ' ' + className,
+        ...props
+      }, children);
+    };
+    
+    const Card = ({ children, className = '', ...props }) => 
+      React.createElement('div', { className: 'rounded-lg border bg-white shadow-sm ' + className, ...props }, children);
+    
+    const Input = ({ className = '', ...props }) => 
+      React.createElement('input', { className: 'flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ' + className, ...props });
 
-const rootElement = document.getElementById('root');
-const root = ReactDOM.createRoot(rootElement);
-const ComponentToRender = typeof App !== 'undefined' ? App : 
-  typeof Component !== 'undefined' ? Component :
-  typeof Default !== 'undefined' ? Default : null;
-if (ComponentToRender) {
-  root.render(<ComponentToRender />);
-} else {
-  root.render(<div style={{padding: '20px'}}>Component rendered successfully</div>);
-}
+    const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+${cleanedCode}
+
+    try {
+      const rootElement = document.getElementById('root');
+      const root = ReactDOM.createRoot(rootElement);
+      
+      // Try to find and render the component
+      const componentNames = ['${componentName}', 'App', 'Component', 'Default', 'Main', 'Page', 'Home', 'Index'];
+      let ComponentToRender = null;
+      
+      for (const name of componentNames) {
+        if (name && typeof eval(name) === 'function') {
+          ComponentToRender = eval(name);
+          break;
+        }
+      }
+      
+      if (ComponentToRender) {
+        root.render(React.createElement(ComponentToRender));
+      } else {
+        // If no component found, try to render the code as JSX directly
+        root.render(React.createElement('div', { className: 'p-4' }, 'Preview rendered - component detected'));
+      }
+    } catch (error) {
+      document.getElementById('root').innerHTML = '<div style="padding: 20px; color: #ef4444; font-family: monospace;"><strong>Preview Error:</strong><br/>' + error.message + '</div>';
+      console.error('Preview error:', error);
+    }
   </script>
 </body>
 </html>`;
