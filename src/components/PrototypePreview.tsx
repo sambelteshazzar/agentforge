@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisualPrototype } from "./VisualPrototype";
 import { EditorExport } from "./EditorExport";
 import { DesignTokenSync } from "./DesignTokenSync";
+import { CollaborationPanel } from "./CollaborationPanel";
+import { LiveCursors, CursorTracker } from "./LiveCursors";
+import { useCollaboration } from "@/hooks/useCollaboration";
 import { 
   Eye, Code2, Copy, Check, Maximize2, X, 
   Zap, ChevronDown, ChevronUp
@@ -16,6 +19,7 @@ interface PrototypePreviewProps {
   language: string;
   onCopy: () => void;
   copied: boolean;
+  roomId?: string;
 }
 
 const SUPPORTED_LANGUAGES = new Set([
@@ -46,15 +50,34 @@ const canShowVisualPreview = (language: string): boolean => {
   return visualLangs.includes(language.toLowerCase());
 };
 
-export const PrototypePreview = ({ code, language, onCopy, copied }: PrototypePreviewProps) => {
+export const PrototypePreview = ({ code, language, onCopy, copied, roomId: initialRoomId }: PrototypePreviewProps) => {
   const [activeView, setActiveView] = useState<"prototype" | "code">(
     canShowVisualPreview(language) ? "prototype" : "code"
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showTokenSync, setShowTokenSync] = useState(false);
+  const [currentRoomId, setCurrentRoomId] = useState(initialRoomId || "");
   const codeRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const prismLanguage = getPrismLanguage(language);
   const hasVisualPreview = canShowVisualPreview(language);
+
+  const {
+    collaborators,
+    isConnected,
+    currentUser,
+    updateCursor,
+  } = useCollaboration(currentRoomId);
+
+  const handleCreateRoom = useCallback(() => {
+    const newRoomId = `room_${Math.random().toString(36).slice(2, 11)}`;
+    setCurrentRoomId(newRoomId);
+    return newRoomId;
+  }, []);
+
+  const handleJoinRoom = useCallback((roomId: string) => {
+    setCurrentRoomId(roomId);
+  }, []);
 
   useEffect(() => {
     if (codeRef.current && activeView === "code") {
@@ -63,10 +86,20 @@ export const PrototypePreview = ({ code, language, onCopy, copied }: PrototypePr
   }, [code, prismLanguage, activeView]);
 
   return (
-    <div className={cn(
-      "rounded-xl overflow-hidden border border-border bg-card",
-      isFullscreen && "fixed inset-4 z-50 shadow-2xl"
-    )}>
+    <div 
+      ref={containerRef}
+      className={cn(
+        "rounded-xl overflow-hidden border border-border bg-card relative",
+        isFullscreen && "fixed inset-4 z-50 shadow-2xl"
+      )}
+    >
+      {/* Live Cursors */}
+      {currentRoomId && (
+        <>
+          <LiveCursors collaborators={collaborators} containerRef={containerRef} />
+          <CursorTracker onCursorMove={updateCursor} />
+        </>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border">
         <div className="flex items-center gap-3">
@@ -102,6 +135,15 @@ export const PrototypePreview = ({ code, language, onCopy, copied }: PrototypePr
             Tokens
             {showTokenSync ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </Button>
+
+          <CollaborationPanel
+            roomId={currentRoomId}
+            collaborators={collaborators}
+            isConnected={isConnected}
+            currentUser={currentUser}
+            onJoinRoom={handleJoinRoom}
+            onCreateRoom={handleCreateRoom}
+          />
           
           <EditorExport code={code} language={language} />
           
