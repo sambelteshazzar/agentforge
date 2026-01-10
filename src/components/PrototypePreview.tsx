@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisualPrototype } from "./VisualPrototype";
 import { EditorExport } from "./EditorExport";
+import { DesignTokenSync } from "./DesignTokenSync";
 import { 
   Eye, Code2, Copy, Check, Maximize2, X, 
-  ExternalLink, Smartphone, Tablet, Monitor
+  Zap, ChevronDown, ChevronUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Prism from "prismjs";
-import { useEffect, useRef } from "react";
 
 interface PrototypePreviewProps {
   code: string;
@@ -51,6 +51,7 @@ export const PrototypePreview = ({ code, language, onCopy, copied }: PrototypePr
     canShowVisualPreview(language) ? "prototype" : "code"
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showTokenSync, setShowTokenSync] = useState(false);
   const codeRef = useRef<HTMLElement>(null);
   const prismLanguage = getPrismLanguage(language);
   const hasVisualPreview = canShowVisualPreview(language);
@@ -90,6 +91,18 @@ export const PrototypePreview = ({ code, language, onCopy, copied }: PrototypePr
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant={showTokenSync ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setShowTokenSync(!showTokenSync)}
+            title="Design Token Sync"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Tokens
+            {showTokenSync ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </Button>
+          
           <EditorExport code={code} language={language} />
           
           <Button
@@ -138,6 +151,11 @@ export const PrototypePreview = ({ code, language, onCopy, copied }: PrototypePr
             </div>
           </pre>
         </div>
+      )}
+
+      {/* Design Token Sync Panel */}
+      {showTokenSync && (
+        <DesignTokenSync code={code} />
       )}
     </div>
   );
