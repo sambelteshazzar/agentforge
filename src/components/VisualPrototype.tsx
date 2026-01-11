@@ -34,6 +34,17 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
   const generatePreviewHtml = (code: string, lang: string): string => {
     const normalizedLang = lang.toLowerCase();
     
+    // Dark theme colors matching the app
+    const darkTheme = {
+      bg: '#0a0d14',
+      cardBg: '#0f1219',
+      text: '#f8fafc',
+      textMuted: '#8b9cb5',
+      border: '#1e2736',
+      primary: '#22d3ee',
+      primaryHover: '#06b6d4',
+    };
+    
     // Check if this looks like React code (has JSX or React patterns)
     const looksLikeReact = 
       code.includes('React') ||
@@ -73,7 +84,7 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
         .replace(/as\s+\w+(\[\])?/g, ''); // Remove type assertions
       
       return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -82,21 +93,43 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: '${darkTheme.bg}',
+            foreground: '${darkTheme.text}',
+            card: '${darkTheme.cardBg}',
+            'card-foreground': '${darkTheme.text}',
+            muted: '${darkTheme.border}',
+            'muted-foreground': '${darkTheme.textMuted}',
+            border: '${darkTheme.border}',
+            primary: '${darkTheme.primary}',
+            'primary-foreground': '${darkTheme.bg}',
+          }
+        }
+      }
+    }
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    html, body { background: ${darkTheme.bg}; color: ${darkTheme.text}; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; min-height: 100vh; }
     ${showGrid ? `
     body { 
       background-image: 
-        linear-gradient(to right, rgba(147, 51, 234, 0.1) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(147, 51, 234, 0.1) 1px, transparent 1px);
+        linear-gradient(to right, rgba(34, 211, 238, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(34, 211, 238, 0.1) 1px, transparent 1px);
       background-size: 8px 8px;
+      background-color: ${darkTheme.bg};
     }` : ''}
   </style>
 </head>
-<body>
+<body class="dark bg-background text-foreground">
   <div id="root"></div>
   <script type="text/babel" data-presets="react">
     // Polyfill common React hooks and utilities
@@ -121,16 +154,16 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
       'Zap', 'Sparkles', 'Wand2', 'Bot', 'Brain', 'Cpu', 'Globe', 'Map', 'Navigation'];
     icons.forEach(name => { window[name] = createIcon(name); });
     
-    // Stub for common UI components
+    // Stub for common UI components - dark theme styled
     const Button = ({ children, onClick, className = '', variant = 'default', size = 'default', disabled, type = 'button', ...props }) => {
-      const baseStyles = 'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+      const baseStyles = 'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none';
       const variants = {
-        default: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
-        outline: 'border border-gray-300 bg-transparent hover:bg-gray-100 focus:ring-gray-500',
-        ghost: 'hover:bg-gray-100 focus:ring-gray-500',
+        default: 'bg-cyan-500 text-gray-900 hover:bg-cyan-400 focus:ring-cyan-500',
+        secondary: 'bg-gray-800 text-gray-100 hover:bg-gray-700 focus:ring-gray-500',
+        outline: 'border border-gray-600 bg-transparent text-gray-100 hover:bg-gray-800 focus:ring-gray-500',
+        ghost: 'text-gray-100 hover:bg-gray-800 focus:ring-gray-500',
         destructive: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-        link: 'text-blue-600 underline-offset-4 hover:underline',
+        link: 'text-cyan-400 underline-offset-4 hover:underline',
       };
       const sizes = {
         default: 'h-10 px-4 py-2',
@@ -148,16 +181,16 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
     };
     
     const Card = ({ children, className = '', ...props }) => 
-      React.createElement('div', { className: 'rounded-xl border border-gray-200 bg-white shadow-sm ' + className, ...props }, children);
+      React.createElement('div', { className: 'rounded-xl border border-gray-700 bg-gray-900 shadow-lg ' + className, ...props }, children);
     
     const CardHeader = ({ children, className = '', ...props }) => 
       React.createElement('div', { className: 'flex flex-col space-y-1.5 p-6 ' + className, ...props }, children);
     
     const CardTitle = ({ children, className = '', ...props }) => 
-      React.createElement('h3', { className: 'text-2xl font-semibold leading-none tracking-tight ' + className, ...props }, children);
+      React.createElement('h3', { className: 'text-2xl font-semibold leading-none tracking-tight text-gray-100 ' + className, ...props }, children);
     
     const CardDescription = ({ children, className = '', ...props }) => 
-      React.createElement('p', { className: 'text-sm text-gray-500 ' + className, ...props }, children);
+      React.createElement('p', { className: 'text-sm text-gray-400 ' + className, ...props }, children);
     
     const CardContent = ({ children, className = '', ...props }) => 
       React.createElement('div', { className: 'p-6 pt-0 ' + className, ...props }, children);
@@ -168,29 +201,29 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
     const Input = ({ className = '', type = 'text', ...props }) => 
       React.createElement('input', { 
         type,
-        className: 'flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + className, 
+        className: 'flex h-10 w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-100 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + className, 
         ...props 
       });
     
     const Textarea = ({ className = '', ...props }) => 
       React.createElement('textarea', { 
-        className: 'flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + className, 
+        className: 'flex min-h-[80px] w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-gray-100 ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + className, 
         ...props 
       });
     
     const Label = ({ children, className = '', htmlFor, ...props }) => 
       React.createElement('label', { 
         htmlFor,
-        className: 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ' + className, 
+        className: 'text-sm font-medium leading-none text-gray-200 peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ' + className, 
         ...props 
       }, children);
     
     const Badge = ({ children, className = '', variant = 'default', ...props }) => {
       const variants = {
-        default: 'bg-blue-600 text-white hover:bg-blue-700',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-        outline: 'border border-gray-300 text-gray-700',
-        destructive: 'bg-red-100 text-red-700',
+        default: 'bg-cyan-500 text-gray-900 hover:bg-cyan-400',
+        secondary: 'bg-gray-700 text-gray-100 hover:bg-gray-600',
+        outline: 'border border-gray-600 text-gray-300',
+        destructive: 'bg-red-900/50 text-red-300',
       };
       return React.createElement('div', { 
         className: 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ' + (variants[variant] || variants.default) + ' ' + className, 
@@ -205,11 +238,11 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
       React.createElement('img', { src, alt, className: 'aspect-square h-full w-full ' + className, ...props });
     
     const AvatarFallback = ({ children, className = '', ...props }) => 
-      React.createElement('div', { className: 'flex h-full w-full items-center justify-center rounded-full bg-gray-100 ' + className, ...props }, children);
+      React.createElement('div', { className: 'flex h-full w-full items-center justify-center rounded-full bg-gray-700 text-gray-200 ' + className, ...props }, children);
     
     const Separator = ({ className = '', orientation = 'horizontal', ...props }) => 
       React.createElement('div', { 
-        className: (orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]') + ' bg-gray-200 ' + className, 
+        className: (orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]') + ' bg-gray-700 ' + className, 
         ...props 
       });
     
@@ -218,7 +251,7 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
         role: 'switch',
         'aria-checked': checked,
         onClick: () => onCheckedChange && onCheckedChange(!checked),
-        className: 'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + (checked ? 'bg-blue-600' : 'bg-gray-200') + ' ' + className,
+        className: 'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ' + (checked ? 'bg-cyan-500' : 'bg-gray-700') + ' ' + className,
         ...props
       }, React.createElement('span', {
         className: 'pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ' + (checked ? 'translate-x-5' : 'translate-x-0')
@@ -229,22 +262,22 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
         role: 'checkbox',
         'aria-checked': checked,
         onClick: () => onCheckedChange && onCheckedChange(!checked),
-        className: 'h-4 w-4 shrink-0 rounded border border-gray-300 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + (checked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white') + ' ' + className,
+        className: 'h-4 w-4 shrink-0 rounded border border-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + (checked ? 'bg-cyan-500 border-cyan-500 text-gray-900' : 'bg-gray-800') + ' ' + className,
         ...props
       }, checked && React.createElement('span', { className: 'flex items-center justify-center text-current' }, '✓'));
     
     const Progress = ({ value = 0, className = '', ...props }) => 
       React.createElement('div', { 
-        className: 'relative h-4 w-full overflow-hidden rounded-full bg-gray-100 ' + className, 
+        className: 'relative h-4 w-full overflow-hidden rounded-full bg-gray-800 ' + className, 
         ...props 
       }, React.createElement('div', {
-        className: 'h-full bg-blue-600 transition-all',
+        className: 'h-full bg-cyan-500 transition-all',
         style: { width: value + '%' }
       }));
     
     const Skeleton = ({ className = '', ...props }) => 
       React.createElement('div', { 
-        className: 'animate-pulse rounded-md bg-gray-200 ' + className, 
+        className: 'animate-pulse rounded-md bg-gray-700 ' + className, 
         ...props 
       });
     
@@ -262,19 +295,19 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
     
     const TabsList = ({ children, className = '', activeTab, setActiveTab, ...props }) => 
       React.createElement('div', { 
-        className: 'inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 ' + className, 
+        className: 'inline-flex h-10 items-center justify-center rounded-md bg-gray-800 p-1 text-gray-400 ' + className, 
         ...props 
       }, React.Children.map(children, child => child && React.cloneElement(child, { activeTab, setActiveTab })));
     
     const TabsTrigger = ({ children, value, className = '', activeTab, setActiveTab, ...props }) => 
       React.createElement('button', { 
         onClick: () => setActiveTab(value),
-        className: 'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ' + (activeTab === value ? 'bg-white text-gray-900 shadow-sm' : '') + ' ' + className, 
+        className: 'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ' + (activeTab === value ? 'bg-gray-700 text-gray-100 shadow-sm' : '') + ' ' + className, 
         ...props 
       }, children);
     
     const TabsContent = ({ children, value, className = '', activeTab, ...props }) => 
-      activeTab === value ? React.createElement('div', { className: 'mt-2 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ' + className, ...props }, children) : null;
+      activeTab === value ? React.createElement('div', { className: 'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 ' + className, ...props }, children) : null;
     
     const cn = (...classes) => classes.filter(Boolean).join(' ');
     
@@ -323,14 +356,14 @@ ${cleanedCode}
         if (ComponentToRender) {
           root.render(React.createElement(ComponentToRender));
         } else {
-          root.render(React.createElement('div', { className: 'p-8 text-center text-gray-500' }, 
-            React.createElement('p', { className: 'text-lg font-medium' }, 'No React component detected'),
+          root.render(React.createElement('div', { className: 'p-8 text-center text-gray-400' }, 
+            React.createElement('p', { className: 'text-lg font-medium text-gray-200' }, 'No React component detected'),
             React.createElement('p', { className: 'text-sm mt-2' }, 'Make sure your code exports a valid React component')
           ));
         }
       }
     } catch (error) {
-      document.getElementById('root').innerHTML = '<div style="padding: 20px; color: #ef4444; font-family: monospace; background: #fef2f2; border-radius: 8px; margin: 16px;"><strong>Preview Error:</strong><br/><pre style="margin-top: 8px; white-space: pre-wrap;">' + error.message + '</pre></div>';
+      document.getElementById('root').innerHTML = '<div style="padding: 20px; color: #f87171; font-family: monospace; background: #1f2937; border: 1px solid #374151; border-radius: 8px; margin: 16px;"><strong>Preview Error:</strong><br/><pre style="margin-top: 8px; white-space: pre-wrap; color: #fca5a5;">' + error.message + '</pre></div>';
       console.error('Preview error:', error);
     }
   </script>
@@ -338,74 +371,85 @@ ${cleanedCode}
 </html>`;
     }
     
+    
     // For HTML
     if (["html", "htm"].includes(normalizedLang)) {
       if (code.includes("<html") || code.includes("<!DOCTYPE")) {
         return code;
       }
       return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HTML Preview</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; padding: 16px; }
+    html, body { background: ${darkTheme.bg}; color: ${darkTheme.text}; }
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 16px; min-height: 100vh; }
     ${showGrid ? `
     body { 
       background-image: 
-        linear-gradient(to right, rgba(147, 51, 234, 0.1) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(147, 51, 234, 0.1) 1px, transparent 1px);
+        linear-gradient(to right, rgba(34, 211, 238, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(34, 211, 238, 0.1) 1px, transparent 1px);
       background-size: 8px 8px;
+      background-color: ${darkTheme.bg};
     }` : ''}
   </style>
 </head>
-<body>
+<body class="dark">
 ${code}
 </body>
 </html>`;
     }
 
-    // For CSS - show with sample HTML
+    // For CSS - apply styles to a proper demo page
     if (normalizedLang === "css") {
       return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSS Preview</title>
   <style>
-    ${code}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: ${darkTheme.bg}; color: ${darkTheme.text}; min-height: 100vh; }
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; }
     ${showGrid ? `
     body { 
       background-image: 
-        linear-gradient(to right, rgba(147, 51, 234, 0.1) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(147, 51, 234, 0.1) 1px, transparent 1px);
+        linear-gradient(to right, rgba(34, 211, 238, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(34, 211, 238, 0.1) 1px, transparent 1px);
       background-size: 8px 8px;
+      background-color: ${darkTheme.bg};
     }` : ''}
+    /* User CSS below */
+    ${code}
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1>CSS Preview</h1>
-    <p>Your styles have been applied to this document.</p>
-    <button>Sample Button</button>
-    <div class="box">Sample Box</div>
+<body class="dark">
+  <div class="preview-container" style="max-width: 800px; margin: 0 auto;">
+    <p style="color: ${darkTheme.textMuted}; font-size: 14px; margin-bottom: 16px;">Your CSS styles have been applied to this document.</p>
   </div>
 </body>
 </html>`;
     }
 
-    // Default: show code in pre tag
+    // Default: show code in pre tag with dark theme
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <style>
-    body { font-family: 'Monaco', 'Menlo', monospace; padding: 16px; background: #1a1b26; color: #a9b1d6; }
-    pre { white-space: pre-wrap; word-wrap: break-word; }
+    html, body { background: ${darkTheme.bg}; color: ${darkTheme.text}; min-height: 100vh; margin: 0; }
+    body { font-family: 'Monaco', 'Menlo', monospace; padding: 16px; }
+    pre { white-space: pre-wrap; word-wrap: break-word; color: ${darkTheme.textMuted}; }
   </style>
 </head>
 <body>
