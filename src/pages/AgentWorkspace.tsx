@@ -89,7 +89,7 @@ const AgentWorkspace = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Agent not found</h1>
-          <Button onClick={() => navigate("/")}>Go back</Button>
+          <Button onClick={() => navigate("/dashboard")}>Go back</Button>
         </div>
       </div>
     );
@@ -283,7 +283,7 @@ const AgentWorkspace = () => {
       {/* Header */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-6 h-16 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", agent.iconBg)}>
