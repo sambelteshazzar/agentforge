@@ -34,22 +34,43 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
   const generatePreviewHtml = (code: string, lang: string): string => {
     const normalizedLang = lang.toLowerCase();
     
-    // For React/JSX components
-    if (["jsx", "tsx", "javascriptreact", "typescriptreact"].includes(normalizedLang)) {
+    // Check if this looks like React code (has JSX or React patterns)
+    const looksLikeReact = 
+      code.includes('React') ||
+      code.includes('useState') ||
+      code.includes('useEffect') ||
+      code.includes('className=') ||
+      code.includes('onClick=') ||
+      code.includes('onChange=') ||
+      /<[A-Z]\w*/.test(code) || // JSX component tags
+      /return\s*\(?\s*</.test(code) || // Return with JSX
+      /=>\s*\(?\s*</.test(code); // Arrow function returning JSX
+    
+    // For React/JSX components - include javascript/typescript if they look like React
+    const isReactLanguage = ["jsx", "tsx", "javascriptreact", "typescriptreact", "react"].includes(normalizedLang);
+    const isJsTs = ["javascript", "typescript", "js", "ts"].includes(normalizedLang);
+    
+    if (isReactLanguage || (isJsTs && looksLikeReact)) {
       // Extract component name from various patterns
-      const componentMatch = code.match(/(?:export\s+default\s+)?(?:function|const|class)\s+(\w+)/);
-      const componentName = componentMatch ? componentMatch[1] : null;
+      const exportDefaultMatch = code.match(/export\s+default\s+(?:function\s+)?(\w+)/);
+      const functionMatch = code.match(/(?:function|const|class)\s+(\w+)\s*(?:=|extends|\()/);
+      const componentName = exportDefaultMatch?.[1] || functionMatch?.[1] || null;
       
       // Clean up TypeScript types and imports for browser execution
       const cleanedCode = code
         .replace(/import\s+.*?from\s+['"].*?['"];?\s*/g, '') // Remove imports
+        .replace(/import\s+['"].*?['"];?\s*/g, '') // Remove side-effect imports
         .replace(/export\s+default\s+/g, '') // Remove export default
         .replace(/export\s+/g, '') // Remove export
         .replace(/:\s*React\.FC\s*(<.*?>)?/g, '') // Remove React.FC type
+        .replace(/:\s*React\.\w+(<.*?>)?/g, '') // Remove React types
+        .replace(/:\s*\{[^}]+\}/g, '') // Remove inline object types
+        .replace(/:\s*\([^)]+\)\s*=>/g, ' =>') // Remove function parameter types
         .replace(/:\s*\w+(\[\])?\s*(?=[,\)\=\{])/g, '') // Remove type annotations
         .replace(/<(\w+)(?:,\s*\w+)*>/g, '') // Remove generics
-        .replace(/interface\s+\w+\s*\{[^}]*\}/g, '') // Remove interfaces
-        .replace(/type\s+\w+\s*=\s*[^;]+;/g, ''); // Remove type declarations
+        .replace(/interface\s+\w+\s*\{[^}]*\}/gs, '') // Remove interfaces
+        .replace(/type\s+\w+\s*=\s*[^;]+;/g, '') // Remove type declarations
+        .replace(/as\s+\w+(\[\])?/g, ''); // Remove type assertions
       
       return `<!DOCTYPE html>
 <html lang="en">
@@ -62,6 +83,7 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -78,16 +100,37 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
   <div id="root"></div>
   <script type="text/babel" data-presets="react">
     // Polyfill common React hooks and utilities
-    const { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } = React;
+    const { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext, useReducer, useLayoutEffect, Fragment } = React;
     
-    // Stub for common UI components that might be imported
-    const Button = ({ children, onClick, className = '', variant = 'default', size = 'default', ...props }) => {
-      const baseStyles = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none';
+    // Icon component stub
+    const createIcon = (name) => ({ className = '', size = 24, ...props }) => 
+      React.createElement('span', { 
+        className: 'inline-flex items-center justify-center ' + className,
+        style: { width: size, height: size },
+        ...props 
+      }, React.createElement('i', { className: 'lucide lucide-' + name.toLowerCase() }));
+    
+    // Common Lucide icons
+    const icons = ['Search', 'Menu', 'X', 'ChevronDown', 'ChevronUp', 'ChevronLeft', 'ChevronRight', 
+      'Plus', 'Minus', 'Check', 'Copy', 'Edit', 'Trash', 'Settings', 'User', 'Home', 'Mail', 
+      'Phone', 'Calendar', 'Clock', 'Star', 'Heart', 'Share', 'Download', 'Upload', 'Send',
+      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ExternalLink', 'Link', 'Image',
+      'File', 'Folder', 'Code', 'Terminal', 'Eye', 'EyeOff', 'Lock', 'Unlock', 'Key',
+      'Bell', 'MessageSquare', 'MessageCircle', 'Info', 'AlertCircle', 'AlertTriangle',
+      'CheckCircle', 'XCircle', 'HelpCircle', 'Loader', 'RefreshCw', 'RotateCcw',
+      'Zap', 'Sparkles', 'Wand2', 'Bot', 'Brain', 'Cpu', 'Globe', 'Map', 'Navigation'];
+    icons.forEach(name => { window[name] = createIcon(name); });
+    
+    // Stub for common UI components
+    const Button = ({ children, onClick, className = '', variant = 'default', size = 'default', disabled, type = 'button', ...props }) => {
+      const baseStyles = 'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
       const variants = {
-        default: 'bg-blue-600 text-white hover:bg-blue-700',
-        outline: 'border border-gray-300 bg-transparent hover:bg-gray-100',
-        ghost: 'hover:bg-gray-100',
-        destructive: 'bg-red-600 text-white hover:bg-red-700',
+        default: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
+        outline: 'border border-gray-300 bg-transparent hover:bg-gray-100 focus:ring-gray-500',
+        ghost: 'hover:bg-gray-100 focus:ring-gray-500',
+        destructive: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+        link: 'text-blue-600 underline-offset-4 hover:underline',
       };
       const sizes = {
         default: 'h-10 px-4 py-2',
@@ -96,19 +139,150 @@ export const VisualPrototype = ({ code, language, className }: VisualPrototypePr
         icon: 'h-10 w-10',
       };
       return React.createElement('button', {
+        type,
         onClick,
+        disabled,
         className: baseStyles + ' ' + (variants[variant] || variants.default) + ' ' + (sizes[size] || sizes.default) + ' ' + className,
         ...props
       }, children);
     };
     
     const Card = ({ children, className = '', ...props }) => 
-      React.createElement('div', { className: 'rounded-lg border bg-white shadow-sm ' + className, ...props }, children);
+      React.createElement('div', { className: 'rounded-xl border border-gray-200 bg-white shadow-sm ' + className, ...props }, children);
     
-    const Input = ({ className = '', ...props }) => 
-      React.createElement('input', { className: 'flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ' + className, ...props });
-
+    const CardHeader = ({ children, className = '', ...props }) => 
+      React.createElement('div', { className: 'flex flex-col space-y-1.5 p-6 ' + className, ...props }, children);
+    
+    const CardTitle = ({ children, className = '', ...props }) => 
+      React.createElement('h3', { className: 'text-2xl font-semibold leading-none tracking-tight ' + className, ...props }, children);
+    
+    const CardDescription = ({ children, className = '', ...props }) => 
+      React.createElement('p', { className: 'text-sm text-gray-500 ' + className, ...props }, children);
+    
+    const CardContent = ({ children, className = '', ...props }) => 
+      React.createElement('div', { className: 'p-6 pt-0 ' + className, ...props }, children);
+    
+    const CardFooter = ({ children, className = '', ...props }) => 
+      React.createElement('div', { className: 'flex items-center p-6 pt-0 ' + className, ...props }, children);
+    
+    const Input = ({ className = '', type = 'text', ...props }) => 
+      React.createElement('input', { 
+        type,
+        className: 'flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + className, 
+        ...props 
+      });
+    
+    const Textarea = ({ className = '', ...props }) => 
+      React.createElement('textarea', { 
+        className: 'flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + className, 
+        ...props 
+      });
+    
+    const Label = ({ children, className = '', htmlFor, ...props }) => 
+      React.createElement('label', { 
+        htmlFor,
+        className: 'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ' + className, 
+        ...props 
+      }, children);
+    
+    const Badge = ({ children, className = '', variant = 'default', ...props }) => {
+      const variants = {
+        default: 'bg-blue-600 text-white hover:bg-blue-700',
+        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+        outline: 'border border-gray-300 text-gray-700',
+        destructive: 'bg-red-100 text-red-700',
+      };
+      return React.createElement('div', { 
+        className: 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ' + (variants[variant] || variants.default) + ' ' + className, 
+        ...props 
+      }, children);
+    };
+    
+    const Avatar = ({ children, className = '', ...props }) => 
+      React.createElement('div', { className: 'relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ' + className, ...props }, children);
+    
+    const AvatarImage = ({ src, alt = '', className = '', ...props }) => 
+      React.createElement('img', { src, alt, className: 'aspect-square h-full w-full ' + className, ...props });
+    
+    const AvatarFallback = ({ children, className = '', ...props }) => 
+      React.createElement('div', { className: 'flex h-full w-full items-center justify-center rounded-full bg-gray-100 ' + className, ...props }, children);
+    
+    const Separator = ({ className = '', orientation = 'horizontal', ...props }) => 
+      React.createElement('div', { 
+        className: (orientation === 'horizontal' ? 'h-[1px] w-full' : 'h-full w-[1px]') + ' bg-gray-200 ' + className, 
+        ...props 
+      });
+    
+    const Switch = ({ checked, onCheckedChange, className = '', ...props }) => 
+      React.createElement('button', {
+        role: 'switch',
+        'aria-checked': checked,
+        onClick: () => onCheckedChange && onCheckedChange(!checked),
+        className: 'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + (checked ? 'bg-blue-600' : 'bg-gray-200') + ' ' + className,
+        ...props
+      }, React.createElement('span', {
+        className: 'pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ' + (checked ? 'translate-x-5' : 'translate-x-0')
+      }));
+    
+    const Checkbox = ({ checked, onCheckedChange, className = '', ...props }) => 
+      React.createElement('button', {
+        role: 'checkbox',
+        'aria-checked': checked,
+        onClick: () => onCheckedChange && onCheckedChange(!checked),
+        className: 'h-4 w-4 shrink-0 rounded border border-gray-300 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ' + (checked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white') + ' ' + className,
+        ...props
+      }, checked && React.createElement('span', { className: 'flex items-center justify-center text-current' }, '✓'));
+    
+    const Progress = ({ value = 0, className = '', ...props }) => 
+      React.createElement('div', { 
+        className: 'relative h-4 w-full overflow-hidden rounded-full bg-gray-100 ' + className, 
+        ...props 
+      }, React.createElement('div', {
+        className: 'h-full bg-blue-600 transition-all',
+        style: { width: value + '%' }
+      }));
+    
+    const Skeleton = ({ className = '', ...props }) => 
+      React.createElement('div', { 
+        className: 'animate-pulse rounded-md bg-gray-200 ' + className, 
+        ...props 
+      });
+    
+    const ScrollArea = ({ children, className = '', ...props }) => 
+      React.createElement('div', { className: 'relative overflow-auto ' + className, ...props }, children);
+    
+    const Tabs = ({ children, defaultValue, value, onValueChange, className = '', ...props }) => {
+      const [activeTab, setActiveTab] = useState(value || defaultValue);
+      return React.createElement('div', { className: className, ...props }, 
+        React.Children.map(children, child => 
+          child && React.cloneElement(child, { activeTab, setActiveTab: onValueChange || setActiveTab })
+        )
+      );
+    };
+    
+    const TabsList = ({ children, className = '', activeTab, setActiveTab, ...props }) => 
+      React.createElement('div', { 
+        className: 'inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 text-gray-500 ' + className, 
+        ...props 
+      }, React.Children.map(children, child => child && React.cloneElement(child, { activeTab, setActiveTab })));
+    
+    const TabsTrigger = ({ children, value, className = '', activeTab, setActiveTab, ...props }) => 
+      React.createElement('button', { 
+        onClick: () => setActiveTab(value),
+        className: 'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ' + (activeTab === value ? 'bg-white text-gray-900 shadow-sm' : '') + ' ' + className, 
+        ...props 
+      }, children);
+    
+    const TabsContent = ({ children, value, className = '', activeTab, ...props }) => 
+      activeTab === value ? React.createElement('div', { className: 'mt-2 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ' + className, ...props }, children) : null;
+    
     const cn = (...classes) => classes.filter(Boolean).join(' ');
+    
+    const motion = { div: 'div', span: 'span', button: 'button', a: 'a', ul: 'ul', li: 'li', p: 'p', h1: 'h1', h2: 'h2', h3: 'h3', section: 'section', article: 'article', nav: 'nav', header: 'header', footer: 'footer', main: 'main', img: 'img' };
+    Object.keys(motion).forEach(key => {
+      motion[key] = ({ children, initial, animate, exit, transition, whileHover, whileTap, variants, className = '', ...props }) => 
+        React.createElement(key, { className, ...props }, children);
+    });
 
 ${cleanedCode}
 
@@ -117,24 +291,46 @@ ${cleanedCode}
       const root = ReactDOM.createRoot(rootElement);
       
       // Try to find and render the component
-      const componentNames = ['${componentName}', 'App', 'Component', 'Default', 'Main', 'Page', 'Home', 'Index'];
+      const componentNames = ['${componentName}', 'App', 'Component', 'Default', 'Main', 'Page', 'Home', 'Index', 'Root', 'Layout', 'Dashboard', 'Hero', 'Landing', 'Preview'];
       let ComponentToRender = null;
       
       for (const name of componentNames) {
-        if (name && typeof eval(name) === 'function') {
-          ComponentToRender = eval(name);
-          break;
+        try {
+          if (name && typeof eval(name) === 'function') {
+            ComponentToRender = eval(name);
+            break;
+          }
+        } catch (e) {
+          // Component not found, try next
         }
       }
       
       if (ComponentToRender) {
         root.render(React.createElement(ComponentToRender));
       } else {
-        // If no component found, try to render the code as JSX directly
-        root.render(React.createElement('div', { className: 'p-4' }, 'Preview rendered - component detected'));
+        // Try to find any function that looks like a React component
+        const allGlobals = Object.keys(window);
+        for (const key of allGlobals) {
+          try {
+            const val = window[key];
+            if (typeof val === 'function' && /^[A-Z]/.test(key) && !icons.includes(key)) {
+              ComponentToRender = val;
+              break;
+            }
+          } catch (e) {}
+        }
+        
+        if (ComponentToRender) {
+          root.render(React.createElement(ComponentToRender));
+        } else {
+          root.render(React.createElement('div', { className: 'p-8 text-center text-gray-500' }, 
+            React.createElement('p', { className: 'text-lg font-medium' }, 'No React component detected'),
+            React.createElement('p', { className: 'text-sm mt-2' }, 'Make sure your code exports a valid React component')
+          ));
+        }
       }
     } catch (error) {
-      document.getElementById('root').innerHTML = '<div style="padding: 20px; color: #ef4444; font-family: monospace;"><strong>Preview Error:</strong><br/>' + error.message + '</div>';
+      document.getElementById('root').innerHTML = '<div style="padding: 20px; color: #ef4444; font-family: monospace; background: #fef2f2; border-radius: 8px; margin: 16px;"><strong>Preview Error:</strong><br/><pre style="margin-top: 8px; white-space: pre-wrap;">' + error.message + '</pre></div>';
       console.error('Preview error:', error);
     }
   </script>
