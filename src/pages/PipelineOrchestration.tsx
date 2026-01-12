@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   ArrowLeft, Play, Pause, RotateCcw, Settings, 
   ChevronRight, Bot, Zap, CheckCircle2, AlertCircle,
-  Clock, Activity
+  Clock, Activity, FileJson, Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,9 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { agentConfig, pipelinePhases, orchestrationAgents } from "@/lib/agentConfig";
 import { ArchitectureFlow } from "@/components/ArchitectureFlow";
+import { TaskSchemaEditor } from "@/components/TaskSchemaEditor";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { exampleTaskSchema, calculateTaskProgress } from "@/lib/taskSchema";
 
 interface PipelineStep {
   id: string;
@@ -107,8 +109,9 @@ const PipelineOrchestration = () => {
       {/* Main Content */}
       <main className="relative z-10 container mx-auto px-6 py-8">
         <Tabs defaultValue="pipeline" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+            <TabsTrigger value="schema">Task Schema</TabsTrigger>
             <TabsTrigger value="architecture">Architecture</TabsTrigger>
             <TabsTrigger value="agents">Agents</TabsTrigger>
           </TabsList>
@@ -249,6 +252,40 @@ const PipelineOrchestration = () => {
                 </div>
               </motion.div>
             </div>
+          </TabsContent>
+
+          {/* Task Schema Tab */}
+          <TabsContent value="schema" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between mb-4"
+            >
+              <div>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <FileJson className="w-5 h-5 text-primary" />
+                  Unified Task Schema v2
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Contract-first schema with memory context, security constraints, and verification criteria
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Plus className="w-4 h-4" />
+                New Task
+              </Button>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="glass-card p-6 rounded-xl"
+            >
+              <TaskSchemaEditor 
+                schema={exampleTaskSchema}
+                onSave={(schema) => console.log("Saved schema:", schema)}
+              />
+            </motion.div>
           </TabsContent>
 
           {/* Architecture Tab */}
