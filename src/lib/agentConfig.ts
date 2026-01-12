@@ -4,6 +4,7 @@ import {
   Sparkles, Sigma, Hash, Feather, Moon, Bird, BarChart3, Database,
   Palette, Layers, PenTool, Figma, Grid3X3, MousePointer2, Component, 
   Frame, Wand2, Eye, Move3D, Brush, Shapes, Layout, Workflow,
+  Shield, GitMerge, FileJson, HardDrive, Network, Lock, Scan, RefreshCw,
   LucideIcon
 } from "lucide-react";
 
@@ -17,6 +18,8 @@ export interface AgentInfo {
   status: "active" | "idle" | "error";
   tasks: number;
   suggestions: string[];
+  category?: "language" | "system" | "design" | "orchestration";
+  phase?: "planning" | "contract" | "implementation" | "verification" | "delivery";
 }
 
 export const agentConfig: Record<string, AgentInfo> = {
@@ -643,6 +646,176 @@ export const agentConfig: Record<string, AgentInfo> = {
       "Generate design variations",
     ],
   },
+  // Advanced Architecture Agents (from advancement.md)
+  secops: {
+    id: "secops",
+    name: "SecOps Agent",
+    description: "Security auditing, dependency scanning, CVE detection, OWASP compliance, and vulnerability assessment.",
+    icon: Shield,
+    iconBg: "bg-secops/10 text-secops",
+    borderColor: "border-secops/30 hover:border-secops/60",
+    status: "active",
+    tasks: 4,
+    category: "orchestration",
+    phase: "implementation",
+    suggestions: [
+      "Scan dependencies for vulnerabilities",
+      "Audit code for security issues",
+      "Check OWASP compliance",
+      "Generate security report",
+      "Review authentication flows",
+    ],
+  },
+  memory: {
+    id: "memory",
+    name: "Memory Agent",
+    description: "RAG-powered context retrieval, project knowledge base, coding standards memory, and decision history.",
+    icon: HardDrive,
+    iconBg: "bg-memory/10 text-memory",
+    borderColor: "border-memory/30 hover:border-memory/60",
+    status: "active",
+    tasks: 3,
+    category: "orchestration",
+    phase: "planning",
+    suggestions: [
+      "Store project coding standards",
+      "Retrieve past architectural decisions",
+      "Index successful implementations",
+      "Query error resolution history",
+      "Build project knowledge base",
+    ],
+  },
+  contractNegotiator: {
+    id: "contractNegotiator",
+    name: "Contract Negotiator",
+    description: "API schema definition, OpenAPI spec generation, interface validation, and contract-first development.",
+    icon: FileJson,
+    iconBg: "bg-contractNegotiator/10 text-contractNegotiator",
+    borderColor: "border-contractNegotiator/30 hover:border-contractNegotiator/60",
+    status: "active",
+    tasks: 5,
+    category: "orchestration",
+    phase: "contract",
+    suggestions: [
+      "Generate OpenAPI specification",
+      "Define API contracts",
+      "Validate schema compatibility",
+      "Create TypeScript interfaces from spec",
+      "Lock API version for implementation",
+    ],
+  },
+  integrator: {
+    id: "integrator",
+    name: "Integrator Agent",
+    description: "Code merging, artifact assembly, production packaging, signed releases, and deployment orchestration.",
+    icon: GitMerge,
+    iconBg: "bg-integrator/10 text-integrator",
+    borderColor: "border-integrator/30 hover:border-integrator/60",
+    status: "active",
+    tasks: 2,
+    category: "orchestration",
+    phase: "delivery",
+    suggestions: [
+      "Merge implementation branches",
+      "Package production artifacts",
+      "Generate signed releases",
+      "Create deployment manifests",
+      "Update vector memory with results",
+    ],
+  },
+  orchestrator: {
+    id: "orchestrator",
+    name: "Orchestrator Agent",
+    description: "Multi-agent coordination, workflow management, task routing, and pipeline execution control.",
+    icon: Network,
+    iconBg: "bg-orchestrator/10 text-orchestrator",
+    borderColor: "border-orchestrator/30 hover:border-orchestrator/60",
+    status: "active",
+    tasks: 6,
+    category: "orchestration",
+    phase: "planning",
+    suggestions: [
+      "Design multi-agent workflow",
+      "Route tasks to specialized agents",
+      "Monitor pipeline execution",
+      "Handle agent failures gracefully",
+      "Optimize task distribution",
+    ],
+  },
+  schemaRegistry: {
+    id: "schemaRegistry",
+    name: "Schema Registry",
+    description: "Centralized schema storage, version management, compatibility validation, and contract enforcement.",
+    icon: Lock,
+    iconBg: "bg-schemaRegistry/10 text-schemaRegistry",
+    borderColor: "border-schemaRegistry/30 hover:border-schemaRegistry/60",
+    status: "active",
+    tasks: 3,
+    category: "orchestration",
+    phase: "contract",
+    suggestions: [
+      "Register new API schema",
+      "Check schema compatibility",
+      "Version lock specifications",
+      "Validate contract compliance",
+      "Generate client bindings",
+    ],
+  },
+  sandbox: {
+    id: "sandbox",
+    name: "Sandbox Agent",
+    description: "Isolated code execution, test environments, log capture, and safe experimentation space.",
+    icon: Scan,
+    iconBg: "bg-sandbox/10 text-sandbox",
+    borderColor: "border-sandbox/30 hover:border-sandbox/60",
+    status: "active",
+    tasks: 4,
+    category: "orchestration",
+    phase: "verification",
+    suggestions: [
+      "Execute code in isolation",
+      "Capture execution logs",
+      "Run integration tests",
+      "Validate against contracts",
+      "Measure performance metrics",
+    ],
+  },
+  autoLinter: {
+    id: "autoLinter",
+    name: "Auto-Linter Agent",
+    description: "Automatic code fixing, syntax error correction, style enforcement, and low-severity issue resolution.",
+    icon: RefreshCw,
+    iconBg: "bg-autoLinter/10 text-autoLinter",
+    borderColor: "border-autoLinter/30 hover:border-autoLinter/60",
+    status: "active",
+    tasks: 3,
+    category: "orchestration",
+    phase: "verification",
+    suggestions: [
+      "Auto-fix syntax errors",
+      "Apply code formatting",
+      "Resolve linting issues",
+      "Enforce coding standards",
+      "Generate fix suggestions",
+    ],
+  },
 };
 
 export const agentList = Object.values(agentConfig);
+
+// Helper functions for advanced architecture
+export const getAgentsByCategory = (category: string) => 
+  agentList.filter(agent => agent.category === category);
+
+export const getAgentsByPhase = (phase: string) => 
+  agentList.filter(agent => agent.phase === phase);
+
+export const orchestrationAgents = getAgentsByCategory("orchestration");
+
+export const pipelinePhases = [
+  { id: "planning", name: "Planning & Memory", agents: ["orchestrator", "planner", "memory"] },
+  { id: "contract", name: "Contract Negotiation", agents: ["contractNegotiator", "schemaRegistry"] },
+  { id: "implementation", name: "Implementation", agents: ["python", "javascript", "typescript", "devops", "secops"] },
+  { id: "verification", name: "Verification", agents: ["sandbox", "verifier", "autoLinter"] },
+  { id: "delivery", name: "Delivery", agents: ["integrator"] },
+];

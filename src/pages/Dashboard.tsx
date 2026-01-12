@@ -16,7 +16,8 @@ import {
   User as UserIcon,
   Settings,
   Command,
-  Star
+  Star,
+  Network
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -214,6 +215,40 @@ const Dashboard = () => {
               <div>
                 <p className="text-2xl font-bold">{totalAgents - activeAgents}</p>
                 <p className="text-sm text-muted-foreground">Coming Soon</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Pipeline Orchestration Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="mb-8"
+        >
+          <div 
+            onClick={() => navigate("/pipeline")}
+            className="glass-card p-6 rounded-xl cursor-pointer transition-all hover:border-primary/30 hover:glow-effect group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                  <Network className="w-7 h-7 text-primary-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Pipeline Orchestration</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Contract-first multi-agent workflow with memory layer
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">8 orchestration agents</span>
+                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                </div>
+                <ArrowRight className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
           </div>

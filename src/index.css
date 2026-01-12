@@ -92,6 +92,16 @@
     --responsiveDesigner: 220 75% 60%;
     --designWorkflow: 190 80% 50%;
     --aiDesignAssist: 270 85% 65%;
+    
+    /* Orchestration Agent colors */
+    --secops: 0 75% 55%;
+    --memory: 200 80% 55%;
+    --contractNegotiator: 160 70% 50%;
+    --integrator: 280 65% 55%;
+    --orchestrator: 185 75% 55%;
+    --schemaRegistry: 45 85% 55%;
+    --sandbox: 35 80% 55%;
+    --autoLinter: 120 65% 50%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;

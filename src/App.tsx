@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import AgentWorkspace from "./pages/AgentWorkspace";
+import PipelineOrchestration from "./pages/PipelineOrchestration";
 import NotFound from "./pages/NotFound";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/agent/:agentId" element={<AgentWorkspace />} />
+            <Route path="/pipeline" element={<PipelineOrchestration />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
