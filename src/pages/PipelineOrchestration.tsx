@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   ArrowLeft, Play, Pause, RotateCcw, Settings, 
   ChevronRight, Bot, Zap, CheckCircle2, AlertCircle,
-  Clock, Activity, FileJson, Plus
+  Clock, Activity, FileJson, Plus, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,10 @@ import { cn } from "@/lib/utils";
 import { agentConfig, pipelinePhases, orchestrationAgents } from "@/lib/agentConfig";
 import { ArchitectureFlow } from "@/components/ArchitectureFlow";
 import { TaskSchemaEditor } from "@/components/TaskSchemaEditor";
+import { VerifierPanel } from "@/components/VerifierPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { exampleTaskSchema, calculateTaskProgress } from "@/lib/taskSchema";
+import { VerificationReport } from "@/lib/verifierTypes";
 
 interface PipelineStep {
   id: string;
@@ -109,9 +111,13 @@ const PipelineOrchestration = () => {
       {/* Main Content */}
       <main className="relative z-10 container mx-auto px-6 py-8">
         <Tabs defaultValue="pipeline" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
             <TabsTrigger value="schema">Task Schema</TabsTrigger>
+            <TabsTrigger value="verifier" className="gap-1">
+              <Shield className="w-3 h-3" />
+              Verifier
+            </TabsTrigger>
             <TabsTrigger value="architecture">Architecture</TabsTrigger>
             <TabsTrigger value="agents">Agents</TabsTrigger>
           </TabsList>
@@ -284,6 +290,25 @@ const PipelineOrchestration = () => {
               <TaskSchemaEditor 
                 schema={exampleTaskSchema}
                 onSave={(schema) => console.log("Saved schema:", schema)}
+              />
+            </motion.div>
+          </TabsContent>
+
+          {/* Verifier Tab */}
+          <TabsContent value="verifier" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card p-6 rounded-xl"
+            >
+              <VerifierPanel 
+                taskSchema={exampleTaskSchema}
+                onVerificationComplete={(report: VerificationReport) => {
+                  console.log("Verification complete:", report);
+                }}
+                onRepairRequest={(agent, suggestion) => {
+                  console.log(`Routing to ${agent}: ${suggestion}`);
+                }}
               />
             </motion.div>
           </TabsContent>
