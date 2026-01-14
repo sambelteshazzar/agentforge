@@ -1,0 +1,24 @@
+# Node.js Runner Image for Verifier Agent Sandbox
+# Supports the "JavaScript Agent" role with pre-installed tools
+
+FROM node:20-alpine
+
+# Create non-root user
+RUN addgroup -S sandboxgroup && adduser -S sandboxuser -G sandboxgroup
+
+# Pre-install common testing and linting tools globally
+# This saves time during verification as agents don't need to install devDependencies
+RUN npm install -g \
+    jest \
+    vitest \
+    eslint \
+    prettier \
+    typescript \
+    tsx \
+    npm-audit-resolver \
+    snyk
+
+WORKDIR /app
+USER sandboxuser
+
+ENTRYPOINT ["/bin/sh", "-c"]
