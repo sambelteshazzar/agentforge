@@ -1,0 +1,31 @@
+# Python Runner Image for Verifier Agent Sandbox
+# Supports the "Python Agent" role with pre-installed security tools
+
+# Use a slim, secure base
+FROM python:3.11-slim-bookworm
+
+# Create a non-root user for security (Sandboxing best practice)
+RUN useradd -m sandboxuser
+
+# Install standard build tools and security scanners
+# Pre-bake these into the image to minimize runtime dependencies
+RUN pip install --no-cache-dir \
+    pytest \
+    pytest-cov \
+    pylint \
+    flake8 \
+    black \
+    bandit \
+    safety \
+    requests \
+    fastapi \
+    uvicorn \
+    pydantic>=2.0 \
+    httpx
+
+# Set working directory and switch to non-root
+WORKDIR /app
+USER sandboxuser
+
+# The entrypoint waits for a command argument (e.g., "pytest")
+ENTRYPOINT ["/bin/bash", "-c"]

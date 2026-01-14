@@ -2,3 +2,6 @@ project_id = "xubvqvjkodbvssliuopj"
 
 [functions.agent-chat]
 verify_jwt = false
+
+[functions.sandbox-execute]
+verify_jwt = false

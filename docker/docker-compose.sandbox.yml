@@ -1,0 +1,71 @@
+# Docker Compose for AgentForge Sandbox Environment
+# This sets up the sandbox infrastructure for the Verifier Agent
+
+version: '3.8'
+
+services:
+  # Python sandbox runner
+  python-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.python-runner
+    image: agentforge/python-runner:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - sandbox-isolated
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M,mode=1777
+
+  # Node.js sandbox runner  
+  node-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.node-runner
+    image: agentforge/node-runner:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - sandbox-isolated
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M,mode=1777
+
+  # Build proxy for dependency installation (has network access)
+  build-proxy:
+    image: alpine:latest
+    networks:
+      - sandbox-build
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    command: ["tail", "-f", "/dev/null"]
+
+networks:
+  # Isolated network with no internet access
+  sandbox-isolated:
+    driver: bridge
+    internal: true
+    
+  # Build network with controlled internet access
+  sandbox-build:
+    driver: bridge
