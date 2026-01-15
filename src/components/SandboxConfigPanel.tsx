@@ -17,7 +17,13 @@ import {
   Container,
   AlertTriangle
 } from "lucide-react";
-import { SandboxConfig, createDefaultSandboxConfig, RunnerType } from "@/lib/sandboxTypes";
+import { 
+  type SandboxConfig, 
+  type RunnerType, 
+  type NetworkMode, 
+  type SeccompProfile,
+  createDefaultSandboxConfig 
+} from "@/lib/verification";
 
 interface SandboxConfigPanelProps {
   config?: SandboxConfig;
@@ -206,7 +212,7 @@ export function SandboxConfigPanel({
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             {config.networkPolicy.mode === 'none' ? (
-              <WifiOff className="h-5 w-5 text-orange-400" />
+              <WifiOff className="h-5 w-5 text-warning" />
             ) : (
               <Wifi className="h-5 w-5 text-primary" />
             )}
@@ -219,7 +225,7 @@ export function SandboxConfigPanel({
             <Label>Network Mode</Label>
             <Select
               value={config.networkPolicy.mode}
-              onValueChange={(value: 'none' | 'restricted' | 'build-only') => 
+              onValueChange={(value: NetworkMode) => 
                 updateNetworkPolicy({ mode: value })
               }
               disabled={readOnly}
@@ -230,19 +236,19 @@ export function SandboxConfigPanel({
               <SelectContent>
                 <SelectItem value="none">
                   <div className="flex items-center gap-2">
-                    <WifiOff className="h-4 w-4 text-orange-400" />
+                    <WifiOff className="h-4 w-4 text-warning" />
                     No Network Access
                   </div>
                 </SelectItem>
                 <SelectItem value="build-only">
                   <div className="flex items-center gap-2">
-                    <Wifi className="h-4 w-4 text-yellow-400" />
+                    <Wifi className="h-4 w-4 text-warning" />
                     Build Phase Only
                   </div>
                 </SelectItem>
                 <SelectItem value="restricted">
                   <div className="flex items-center gap-2">
-                    <Wifi className="h-4 w-4 text-green-400" />
+                    <Wifi className="h-4 w-4 text-success" />
                     Restricted (Allowlist)
                   </div>
                 </SelectItem>
@@ -267,9 +273,9 @@ export function SandboxConfigPanel({
           </div>
 
           {config.networkPolicy.mode === 'none' && (
-            <div className="flex items-start gap-2 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-orange-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-orange-300">
+            <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+              <p className="text-xs text-warning">
                 Network is completely disabled. Dependencies must be pre-installed in the runner image.
               </p>
             </div>
@@ -281,7 +287,7 @@ export function SandboxConfigPanel({
       <Card className="border-border/50 bg-card/50">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-green-400" />
+            <Shield className="h-5 w-5 text-success" />
             <CardTitle className="text-lg">Security Hardening</CardTitle>
           </div>
           <CardDescription>Container isolation and privilege restrictions</CardDescription>
@@ -330,7 +336,7 @@ export function SandboxConfigPanel({
             <Label>Seccomp Profile</Label>
             <Select
               value={config.security.seccompProfile}
-              onValueChange={(value: 'default' | 'strict') => 
+              onValueChange={(value: SeccompProfile) => 
                 updateSecurity({ seccompProfile: value })
               }
               disabled={readOnly}
@@ -349,23 +355,23 @@ export function SandboxConfigPanel({
           </div>
 
           {/* Security Summary */}
-          <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4 text-green-400" />
-              <span className="text-sm font-medium text-green-300">Security Status</span>
+              <Shield className="h-4 w-4 text-success" />
+              <span className="text-sm font-medium text-success">Security Status</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {config.security.readOnlyFilesystem && (
-                <Badge className="bg-green-500/20 text-green-300 text-xs">Read-Only FS</Badge>
+                <Badge className="bg-success/20 text-success text-xs">Read-Only FS</Badge>
               )}
               {config.security.noNewPrivileges && (
-                <Badge className="bg-green-500/20 text-green-300 text-xs">No Privesc</Badge>
+                <Badge className="bg-success/20 text-success text-xs">No Privesc</Badge>
               )}
               {config.networkPolicy.mode === 'none' && (
-                <Badge className="bg-green-500/20 text-green-300 text-xs">Air-Gapped</Badge>
+                <Badge className="bg-success/20 text-success text-xs">Air-Gapped</Badge>
               )}
               {config.networkPolicy.blockExfiltration && (
-                <Badge className="bg-green-500/20 text-green-300 text-xs">No Exfil</Badge>
+                <Badge className="bg-success/20 text-success text-xs">No Exfil</Badge>
               )}
             </div>
           </div>
