@@ -5,10 +5,125 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============= Input Validation =============
+
+type RunnerType = 'python' | 'node' | 'typescript';
+type ArtifactType = 'source' | 'test' | 'config' | 'requirements';
+
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
+function validateExecutionRequest(data: unknown): { 
+  valid: boolean; 
+  errors: ValidationError[]; 
+  request?: ExecutionRequest 
+} {
+  const errors: ValidationError[] = [];
+  
+  if (!data || typeof data !== 'object') {
+    return { valid: false, errors: [{ field: 'body', message: 'Request body must be a JSON object' }] };
+  }
+
+  const body = data as Record<string, unknown>;
+
+  // Validate taskId
+  if (!body.taskId || typeof body.taskId !== 'string') {
+    errors.push({ field: 'taskId', message: 'taskId is required and must be a string' });
+  } else if (body.taskId.length > 100) {
+    errors.push({ field: 'taskId', message: 'taskId must be less than 100 characters' });
+  }
+
+  // Validate subtaskId
+  if (!body.subtaskId || typeof body.subtaskId !== 'string') {
+    errors.push({ field: 'subtaskId', message: 'subtaskId is required and must be a string' });
+  } else if (body.subtaskId.length > 100) {
+    errors.push({ field: 'subtaskId', message: 'subtaskId must be less than 100 characters' });
+  }
+
+  // Validate agentRole
+  if (!body.agentRole || typeof body.agentRole !== 'string') {
+    errors.push({ field: 'agentRole', message: 'agentRole is required and must be a string' });
+  } else if (body.agentRole.length > 50) {
+    errors.push({ field: 'agentRole', message: 'agentRole must be less than 50 characters' });
+  }
+
+  // Validate artifacts
+  if (!body.artifacts || !Array.isArray(body.artifacts)) {
+    errors.push({ field: 'artifacts', message: 'artifacts is required and must be an array' });
+  } else if (body.artifacts.length > 50) {
+    errors.push({ field: 'artifacts', message: 'Cannot process more than 50 artifacts' });
+  } else {
+    body.artifacts.forEach((artifact: unknown, index: number) => {
+      if (!artifact || typeof artifact !== 'object') {
+        errors.push({ field: `artifacts[${index}]`, message: 'Each artifact must be an object' });
+        return;
+      }
+      const art = artifact as Record<string, unknown>;
+      if (!art.filename || typeof art.filename !== 'string') {
+        errors.push({ field: `artifacts[${index}].filename`, message: 'filename is required' });
+      }
+      if (!art.content || typeof art.content !== 'string') {
+        errors.push({ field: `artifacts[${index}].content`, message: 'content is required' });
+      } else if (art.content.length > 1000000) { // 1MB limit per file
+        errors.push({ field: `artifacts[${index}].content`, message: 'content exceeds 1MB limit' });
+      }
+      const validTypes: ArtifactType[] = ['source', 'test', 'config', 'requirements'];
+      if (!art.type || !validTypes.includes(art.type as ArtifactType)) {
+        errors.push({ field: `artifacts[${index}].type`, message: `type must be one of: ${validTypes.join(', ')}` });
+      }
+    });
+  }
+
+  // Validate testCommand
+  if (!body.testCommand || typeof body.testCommand !== 'string') {
+    errors.push({ field: 'testCommand', message: 'testCommand is required and must be a string' });
+  } else if (body.testCommand.length > 500) {
+    errors.push({ field: 'testCommand', message: 'testCommand must be less than 500 characters' });
+  }
+
+  // Validate config
+  if (!body.config || typeof body.config !== 'object') {
+    errors.push({ field: 'config', message: 'config is required and must be an object' });
+  } else {
+    const config = body.config as Record<string, unknown>;
+    const validRunners: RunnerType[] = ['python', 'node', 'typescript'];
+    if (!config.runner || !validRunners.includes(config.runner as RunnerType)) {
+      errors.push({ field: 'config.runner', message: `runner must be one of: ${validRunners.join(', ')}` });
+    }
+    
+    if (config.resourceLimits && typeof config.resourceLimits === 'object') {
+      const limits = config.resourceLimits as Record<string, unknown>;
+      if (typeof limits.memoryMb === 'number' && (limits.memoryMb < 64 || limits.memoryMb > 4096)) {
+        errors.push({ field: 'config.resourceLimits.memoryMb', message: 'memoryMb must be between 64 and 4096' });
+      }
+      if (typeof limits.cpuCores === 'number' && (limits.cpuCores < 0.1 || limits.cpuCores > 4)) {
+        errors.push({ field: 'config.resourceLimits.cpuCores', message: 'cpuCores must be between 0.1 and 4' });
+      }
+      if (typeof limits.timeoutSeconds === 'number' && (limits.timeoutSeconds < 5 || limits.timeoutSeconds > 300)) {
+        errors.push({ field: 'config.resourceLimits.timeoutSeconds', message: 'timeoutSeconds must be between 5 and 300' });
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return { 
+    valid: true, 
+    errors: [], 
+    request: body as unknown as ExecutionRequest 
+  };
+}
+
+// ============= Types =============
+
 interface CodeArtifact {
   filename: string;
   content: string;
-  type: 'source' | 'test' | 'config' | 'requirements';
+  type: ArtifactType;
 }
 
 interface ResourceLimits {
@@ -19,7 +134,7 @@ interface ResourceLimits {
 }
 
 interface SandboxConfig {
-  runner: 'python' | 'node' | 'typescript';
+  runner: RunnerType;
   resourceLimits: ResourceLimits;
 }
 
@@ -58,11 +173,19 @@ interface LintViolation {
   message: string;
 }
 
-// Simulated sandbox execution - in production, this would call Docker API
+interface ExecutionLog {
+  timestamp: string;
+  stream: 'stdout' | 'stderr';
+  content: string;
+}
+
+// ============= Sandbox Execution (Simulated) =============
+// NOTE: This is a simulation. In production, this would call Docker API or Kubernetes Jobs.
+
 async function executeInSandbox(request: ExecutionRequest): Promise<{
   status: 'success' | 'failure' | 'timeout' | 'error';
   exitCode: number;
-  logs: { timestamp: string; stream: string; content: string }[];
+  logs: ExecutionLog[];
   testResults: TestResult[];
   securityFindings: SecurityFinding[];
   lintViolations: LintViolation[];
@@ -70,45 +193,31 @@ async function executeInSandbox(request: ExecutionRequest): Promise<{
   resourceUsage: { peakMemoryMb: number; cpuTimeMs: number };
 }> {
   const startTime = Date.now();
-  const logs: { timestamp: string; stream: string; content: string }[] = [];
+  const logs: ExecutionLog[] = [];
   const testResults: TestResult[] = [];
   const securityFindings: SecurityFinding[] = [];
   const lintViolations: LintViolation[] = [];
 
+  const log = (stream: 'stdout' | 'stderr', content: string) => {
+    logs.push({ timestamp: new Date().toISOString(), stream, content });
+  };
+
   // Log sandbox initialization
-  logs.push({
-    timestamp: new Date().toISOString(),
-    stream: 'stdout',
-    content: `[sandbox] Initializing ${request.config.runner} runner...`
-  });
+  log('stdout', `[sandbox] Initializing ${request.config.runner} runner...`);
+  log('stdout', `[sandbox] Resource limits: ${request.config.resourceLimits.memoryMb}MB RAM, ${request.config.resourceLimits.cpuCores} CPU, ${request.config.resourceLimits.timeoutSeconds}s timeout`);
 
-  logs.push({
-    timestamp: new Date().toISOString(),
-    stream: 'stdout',
-    content: `[sandbox] Resource limits: ${request.config.resourceLimits.memoryMb}MB RAM, ${request.config.resourceLimits.cpuCores} CPU, ${request.config.resourceLimits.timeoutSeconds}s timeout`
-  });
-
-  // Simulate dependency vetting
-  logs.push({
-    timestamp: new Date().toISOString(),
-    stream: 'stdout',
-    content: '[vetting] Scanning dependencies for vulnerabilities...'
-  });
-
-  // Check for requirements/package.json
+  // Phase 1: Dependency vetting
+  log('stdout', '[vetting] Scanning dependencies for vulnerabilities...');
+  
   const requirementsFile = request.artifacts.find(a => 
     a.filename === 'requirements.txt' || a.filename === 'package.json'
   );
 
   if (requirementsFile) {
-    logs.push({
-      timestamp: new Date().toISOString(),
-      stream: 'stdout',
-      content: `[vetting] Found ${requirementsFile.filename}, checking versions...`
-    });
-
-    // Simulate finding unpinned versions
-    if (requirementsFile.content.includes('>=') || requirementsFile.content.includes('^')) {
+    log('stdout', `[vetting] Found ${requirementsFile.filename}, checking versions...`);
+    
+    // Detect unpinned versions
+    if (requirementsFile.content.includes('>=') || requirementsFile.content.includes('^') || requirementsFile.content.includes('*')) {
       securityFindings.push({
         severity: 'low',
         type: 'UNPINNED_DEPENDENCY',
@@ -118,17 +227,12 @@ async function executeInSandbox(request: ExecutionRequest): Promise<{
     }
   }
 
-  // Simulate static analysis
-  logs.push({
-    timestamp: new Date().toISOString(),
-    stream: 'stdout',
-    content: '[lint] Running static analysis...'
-  });
-
-  // Check source files for common issues
+  // Phase 2: Static analysis
+  log('stdout', '[lint] Running static analysis...');
+  
   const sourceFiles = request.artifacts.filter(a => a.type === 'source');
   for (const file of sourceFiles) {
-    // Check for banned patterns
+    // Check for banned patterns (deterministic, not random)
     if (file.content.includes('eval(')) {
       securityFindings.push({
         severity: 'high',
@@ -148,8 +252,8 @@ async function executeInSandbox(request: ExecutionRequest): Promise<{
       });
     }
 
-    // Check for hardcoded secrets patterns
-    const secretPatterns = [/api_key\s*=\s*['"][^'"]+['"]/, /password\s*=\s*['"][^'"]+['"]/];
+    // Check for hardcoded secrets
+    const secretPatterns = [/api_key\s*=\s*['"][^'"]+['"]/, /password\s*=\s*['"][^'"]+['"]/i, /secret\s*=\s*['"][^'"]+['"]/i];
     for (const pattern of secretPatterns) {
       if (pattern.test(file.content)) {
         securityFindings.push({
@@ -158,10 +262,11 @@ async function executeInSandbox(request: ExecutionRequest): Promise<{
           file: file.filename,
           message: 'Potential hardcoded secret detected'
         });
+        break;
       }
     }
 
-    // Simulate lint violations
+    // Line length checks
     const lines = file.content.split('\n');
     lines.forEach((line, index) => {
       if (line.length > 120) {
@@ -177,74 +282,60 @@ async function executeInSandbox(request: ExecutionRequest): Promise<{
     });
   }
 
-  // Simulate security scanning
-  logs.push({
-    timestamp: new Date().toISOString(),
-    stream: 'stdout',
-    content: `[security] Running ${request.config.runner === 'python' ? 'bandit' : 'snyk'} scan...`
-  });
+  // Phase 3: Security scanning
+  log('stdout', `[security] Running ${request.config.runner === 'python' ? 'bandit' : 'snyk'} scan...`);
 
-  // Simulate test execution
-  logs.push({
-    timestamp: new Date().toISOString(),
-    stream: 'stdout',
-    content: `[test] Executing: ${request.testCommand}`
-  });
-
+  // Phase 4: Test execution
+  log('stdout', `[test] Executing: ${request.testCommand}`);
+  
   const testFiles = request.artifacts.filter(a => a.type === 'test');
   
   if (testFiles.length === 0) {
-    logs.push({
-      timestamp: new Date().toISOString(),
-      stream: 'stderr',
-      content: '[test] Warning: No test files provided'
-    });
+    log('stderr', '[test] Warning: No test files provided');
   } else {
-    // Simulate running tests
     for (const testFile of testFiles) {
-      // Parse test functions from content (simplified)
-      const testFunctions = testFile.content.match(/(?:def test_|it\(['"]|test\(['"])([^('"]+)/g) || [];
+      // Parse test functions (deterministic based on content)
+      const testMatches = testFile.content.match(/(?:def test_|it\(['"]|test\(['"]).+/g) || [];
       
-      for (const testMatch of testFunctions) {
-        const testName = testMatch.replace(/(?:def test_|it\(['"]|test\(['")])/, '');
+      for (const testMatch of testMatches) {
+        const testName = testMatch
+          .replace(/def test_/, '')
+          .replace(/it\(['"]/, '')
+          .replace(/test\(['"]/, '')
+          .replace(/['"].*/, '')
+          .replace(/\(.*/, '')
+          .trim();
         
-        // Randomly determine test outcome (in real implementation, this runs actual tests)
-        const passed = Math.random() > 0.2; // 80% pass rate simulation
+        // Deterministic pass/fail based on test name content (not random)
+        // Tests with "fail" or "error" in name will fail, others pass
+        const shouldFail = testName.toLowerCase().includes('fail') || testName.toLowerCase().includes('error');
         
         testResults.push({
           name: testName,
-          status: passed ? 'passed' : 'failed',
-          duration: Math.floor(Math.random() * 500) + 50,
-          errorMessage: passed ? undefined : 'Assertion failed: expected values do not match'
+          status: shouldFail ? 'failed' : 'passed',
+          duration: 50 + (testName.length * 5), // Deterministic duration based on name length
+          errorMessage: shouldFail ? 'Assertion failed: expected values do not match' : undefined
         });
 
-        logs.push({
-          timestamp: new Date().toISOString(),
-          stream: 'stdout',
-          content: `[test] ${passed ? '✓' : '✗'} ${testName} (${testResults[testResults.length - 1].duration}ms)`
-        });
+        log('stdout', `[test] ${shouldFail ? '✗' : '✓'} ${testName} (${testResults[testResults.length - 1].duration}ms)`);
       }
     }
 
     // If no test functions found but test files exist
-    if (testResults.length === 0) {
+    if (testResults.length === 0 && testFiles.length > 0) {
       testResults.push({
         name: 'placeholder_test',
         status: 'passed',
         duration: 10
       });
-      logs.push({
-        timestamp: new Date().toISOString(),
-        stream: 'stdout',
-        content: '[test] ✓ placeholder_test (10ms)'
-      });
+      log('stdout', '[test] ✓ placeholder_test (10ms)');
     }
   }
 
   const endTime = Date.now();
   const durationMs = endTime - startTime;
 
-  // Determine overall status
+  // Determine overall status (deterministic based on findings)
   const hasFailedTests = testResults.some(t => t.status === 'failed' || t.status === 'error');
   const hasCriticalSecurity = securityFindings.some(f => f.severity === 'critical' || f.severity === 'high');
   const hasLintErrors = lintViolations.some(v => v.severity === 'error');
@@ -257,12 +348,7 @@ async function executeInSandbox(request: ExecutionRequest): Promise<{
     exitCode = 1;
   }
 
-  // Final summary log
-  logs.push({
-    timestamp: new Date().toISOString(),
-    stream: 'stdout',
-    content: `[sandbox] Execution complete in ${durationMs}ms - ${status.toUpperCase()}`
-  });
+  log('stdout', `[sandbox] Execution complete in ${durationMs}ms - ${status.toUpperCase()}`);
 
   return {
     status,
@@ -273,11 +359,13 @@ async function executeInSandbox(request: ExecutionRequest): Promise<{
     lintViolations,
     durationMs,
     resourceUsage: {
-      peakMemoryMb: Math.floor(Math.random() * 200) + 50,
+      peakMemoryMb: Math.min(request.config.resourceLimits.memoryMb * 0.4, 200),
       cpuTimeMs: Math.floor(durationMs * 0.7)
     }
   };
 }
+
+// ============= Request Handler =============
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -286,7 +374,35 @@ serve(async (req) => {
   }
 
   try {
-    const request: ExecutionRequest = await req.json();
+    // Parse JSON body
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({
+        status: 'error',
+        message: 'Invalid JSON in request body',
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Validate request
+    const validation = validateExecutionRequest(body);
+    if (!validation.valid) {
+      console.error('[sandbox-execute] Validation failed:', validation.errors);
+      return new Response(JSON.stringify({
+        status: 'error',
+        message: 'Validation failed',
+        errors: validation.errors,
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const request = validation.request!;
     
     console.log(`[sandbox-execute] Starting execution for task ${request.taskId}, subtask ${request.subtaskId}`);
     console.log(`[sandbox-execute] Runner: ${request.config.runner}, Artifacts: ${request.artifacts.length}`);
@@ -318,11 +434,12 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[sandbox-execute] Error:', errorMessage);
+    console.error('[sandbox-execute] Unexpected error:', errorMessage);
     
     return new Response(JSON.stringify({
       status: 'error',
       exitCode: -1,
+      message: 'Internal server error',
       logs: [{
         timestamp: new Date().toISOString(),
         stream: 'stderr',
