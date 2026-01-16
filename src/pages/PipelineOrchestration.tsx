@@ -17,7 +17,7 @@ import { TaskSchemaEditor } from "@/components/TaskSchemaEditor";
 import { VerifierPanel } from "@/components/VerifierPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { exampleTaskSchema, calculateTaskProgress } from "@/lib/taskSchema";
-import { VerificationReport } from "@/lib/verifierTypes";
+import { VerificationReport } from "@/lib/verification";
 
 interface PipelineStep {
   id: string;
