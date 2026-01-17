@@ -1,25 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisualPrototype } from "./VisualPrototype";
-import { EditorExport } from "./EditorExport";
-import { DesignTokenSync } from "./DesignTokenSync";
-import { CollaborationPanel } from "./CollaborationPanel";
-import { LiveCursors, CursorTracker } from "./LiveCursors";
-import { useCollaboration } from "@/hooks/useCollaboration";
-import { 
-  Eye, Code2, Copy, Check, Maximize2, X, 
-  Zap, ChevronDown, ChevronUp, Columns, Play, Pause,
-  SkipBack, SkipForward, RefreshCw, Keyboard,
-  Monitor, Tablet, Smartphone, ZoomIn, ZoomOut,
-  Sun, Moon, Download, Share2, Settings2, Activity
-} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Bot, User, Sparkles, CheckCircle2, Code2, Loader2, Eye, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Prism from "prismjs";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
 
 interface PrototypePreviewProps {
   code: string;
@@ -29,645 +14,333 @@ interface PrototypePreviewProps {
   roomId?: string;
 }
 
-type ViewMode = "prototype" | "code" | "split";
-type DevicePreview = "desktop" | "tablet" | "mobile";
-
-const SUPPORTED_LANGUAGES = new Set([
-  'javascript', 'typescript', 'jsx', 'tsx', 'python', 'bash', 'sql', 'json',
-  'css', 'go', 'rust', 'java', 'c', 'cpp', 'csharp', 'ruby', 'swift', 'kotlin',
-  'scala', 'lua', 'yaml', 'markdown', 'html', 'markup'
-]);
-
-const getPrismLanguage = (language: string): string => {
-  const langMap: Record<string, string> = {
-    js: "javascript",
-    ts: "typescript",
-    py: "python",
-    sh: "bash",
-    shell: "bash",
-    yml: "yaml",
-    md: "markdown",
-    htm: "html",
-    html: "markup",
-  };
-  const normalized = language.toLowerCase();
-  const mapped = langMap[normalized] || normalized;
-  return SUPPORTED_LANGUAGES.has(mapped) ? mapped : "javascript";
-};
-
-const canShowVisualPreview = (language: string): boolean => {
-  const visualLangs = ["html", "htm", "jsx", "tsx", "css", "javascriptreact", "typescriptreact"];
-  return visualLangs.includes(language.toLowerCase());
-};
-
-const KEYBOARD_SHORTCUTS = [
-  { key: "⌘/Ctrl + S", action: "Save" },
-  { key: "⌘/Ctrl + C", action: "Copy" },
-  { key: "⌘/Ctrl + F", action: "Fullscreen" },
-  { key: "⌘/Ctrl + P", action: "Preview" },
-  { key: "Esc", action: "Exit Fullscreen" },
-];
-
-export const PrototypePreview = ({ code, language, onCopy, copied, roomId: initialRoomId }: PrototypePreviewProps) => {
-  const [viewMode, setViewMode] = useState<ViewMode>(
-    canShowVisualPreview(language) ? "prototype" : "code"
+// Live Preview Component for React/TSX code
+const LivePreview = ({ code }: { code: string }) => {
+  // Simple preview simulation
+  return (
+    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 text-white">
+      <div className="text-center">
+        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/20 flex items-center justify-center">
+          <Eye className="w-6 h-6 text-primary" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Live Preview</h3>
+        <p className="text-sm text-gray-400">Interactive component rendering</p>
+      </div>
+    </div>
   );
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showTokenSync, setShowTokenSync] = useState(false);
-  const [currentRoomId, setCurrentRoomId] = useState(initialRoomId || "");
-  const [devicePreview, setDevicePreview] = useState<DevicePreview>("desktop");
-  const [zoom, setZoom] = useState(100);
-  const [isDarkPreview, setIsDarkPreview] = useState(true);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [showActivity, setShowActivity] = useState(false);
-  const [realtimeUpdates, setRealtimeUpdates] = useState<string[]>([]);
-  
+};
+
+// Syntax Highlighted Code with Line-by-Line Animation
+const AnimatedCodeBlock = ({ 
+  code, 
+  isComplete,
+  language 
+}: { 
+  code: string; 
+  isComplete: boolean;
+  language: string;
+}) => {
+  const [visibleLines, setVisibleLines] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
+  const [copied, setCopied] = useState(false);
   const codeRef = useRef<HTMLElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const prismLanguage = getPrismLanguage(language);
-  const hasVisualPreview = canShowVisualPreview(language);
+  const lines = code.split("\n");
 
-  const {
-    collaborators,
-    isConnected,
-    currentUser,
-    updateCursor,
-  } = useCollaboration(currentRoomId);
-
-  // Simulate realtime updates
   useEffect(() => {
-    if (!isPlaying) return;
-    
-    const messages = [
-      "Component mounted",
-      "State updated",
-      "Re-rendering...",
-      "DOM patched",
-      "Event handlers attached",
-      "Styles applied",
-    ];
-    
+    if (!isComplete) {
+      setVisibleLines(0);
+      setShowPreview(false);
+      return;
+    }
+
+    let currentLine = 0;
     const interval = setInterval(() => {
-      setRealtimeUpdates(prev => {
-        const newUpdate = `[${new Date().toLocaleTimeString()}] ${messages[Math.floor(Math.random() * messages.length)]}`;
-        return [...prev.slice(-9), newUpdate];
-      });
-    }, 1000 / playbackSpeed);
-    
+      currentLine++;
+      setVisibleLines(currentLine);
+      if (currentLine >= lines.length) {
+        clearInterval(interval);
+        setTimeout(() => setShowPreview(true), 500);
+      }
+    }, 80);
+
     return () => clearInterval(interval);
-  }, [isPlaying, playbackSpeed]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMeta = e.metaKey || e.ctrlKey;
-      
-      if (e.key === "Escape" && isFullscreen) {
-        setIsFullscreen(false);
-      }
-      if (isMeta && e.key === "f") {
-        e.preventDefault();
-        setIsFullscreen(prev => !prev);
-      }
-      if (isMeta && e.key === "c" && !window.getSelection()?.toString()) {
-        e.preventDefault();
-        onCopy();
-      }
-      if (isMeta && e.key === "p") {
-        e.preventDefault();
-        setViewMode("prototype");
-      }
-    };
-    
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isFullscreen, onCopy]);
-
-  const handleCreateRoom = useCallback(() => {
-    const newRoomId = `room_${Math.random().toString(36).slice(2, 11)}`;
-    setCurrentRoomId(newRoomId);
-    return newRoomId;
-  }, []);
-
-  const handleJoinRoom = useCallback((roomId: string) => {
-    setCurrentRoomId(roomId);
-  }, []);
+  }, [isComplete, lines.length]);
 
   useEffect(() => {
-    if (codeRef.current && (viewMode === "code" || viewMode === "split")) {
+    if (codeRef.current && visibleLines > 0) {
       Prism.highlightElement(codeRef.current);
     }
-  }, [code, prismLanguage, viewMode]);
+  }, [visibleLines]);
 
-  // Step through simulation
-  const totalSteps = code.split('\n').length;
-  
-  const handleStepForward = () => {
-    setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1));
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
-  
-  const handleStepBack = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
-  };
-  
-  const handleReset = () => {
-    setCurrentStep(0);
-    setIsPlaying(false);
+
+  const displayedCode = lines.slice(0, visibleLines).join("\n");
+  const canShowVisualPreview = ["jsx", "tsx", "html", "htm", "css"].includes(language.toLowerCase());
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-gray-900 rounded-lg overflow-hidden">
+        {/* Code Header */}
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+          <div className="flex items-center gap-2">
+            <Code2 className="w-4 h-4 text-primary" />
+            <span className="text-xs font-mono text-gray-400">component.{language}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              title="Copy code"
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-success" />
+              ) : (
+                <Copy className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+            {showPreview && canShowVisualPreview && (
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className={cn(
+                  "p-1 rounded transition-colors",
+                  showPreview ? "bg-primary/20 text-primary" : "hover:bg-gray-700 text-gray-400"
+                )}
+                title="Toggle preview"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Code Content with Line Numbers */}
+        <div className="relative overflow-x-auto">
+          <pre className="p-4 text-sm leading-relaxed">
+            <div className="flex">
+              {/* Line Numbers */}
+              <div className="select-none pr-4 text-right text-gray-600 font-mono text-xs border-r border-gray-700 mr-4">
+                {lines.slice(0, visibleLines).map((_, i) => (
+                  <div key={i} className="leading-relaxed">{i + 1}</div>
+                ))}
+              </div>
+              {/* Code */}
+              <code 
+                ref={codeRef}
+                className={`language-${language} font-mono text-xs`}
+              >
+                {displayedCode}
+              </code>
+            </div>
+            {visibleLines < lines.length && (
+              <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
+            )}
+          </pre>
+        </div>
+      </div>
+
+      {/* Live Preview Panel */}
+      {showPreview && canShowVisualPreview && (
+        <div className="animate-fade-in">
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">Live Preview</span>
+            <span className="text-xs text-muted-foreground">(Interactive)</span>
+          </div>
+          <LivePreview code={code} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const PrototypePreview = ({ code, language, onCopy, copied }: PrototypePreviewProps) => {
+  const [visibleSteps, setVisibleSteps] = useState<number[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [currentTypingIndex, setCurrentTypingIndex] = useState(-1);
+  const [displayedText, setDisplayedText] = useState<Record<number, string>>({});
+  const [codeStepComplete, setCodeStepComplete] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+
+  const demoSteps = [
+    { type: "user", content: `Generate a ${language} component`, delay: 0 },
+    { type: "status", content: "Analyzing request...", delay: 800 },
+    { type: "status", content: `Routing to ${language.toUpperCase()} Agent`, delay: 1500 },
+    { type: "agent", content: "I'll create this component for you. Here is the implementation:", delay: 2500 },
+    { type: "code", content: code, delay: 3500 },
+    { type: "status", content: "Running verification checks...", delay: 3500 + (code.split('\n').length * 80) + 1000 },
+    { type: "status", content: "All tests passed ✓", delay: 3500 + (code.split('\n').length * 80) + 2000 },
+    { type: "agent", content: "Component created successfully! Ready to use in your project.", delay: 3500 + (code.split('\n').length * 80) + 2500 },
+  ];
+
+  useEffect(() => {
+    // Start animation immediately
+    if (!hasStarted) {
+      setHasStarted(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasStarted) return;
+
+    demoSteps.forEach((step, index) => {
+      setTimeout(() => {
+        setVisibleSteps((prev) => [...prev, index]);
+        
+        if (step.type === "user" || step.type === "agent") {
+          setIsTyping(true);
+          setCurrentTypingIndex(index);
+          
+          let charIndex = 0;
+          const content = step.content;
+          const typeInterval = setInterval(() => {
+            if (charIndex <= content.length) {
+              setDisplayedText((prev) => ({
+                ...prev,
+                [index]: content.slice(0, charIndex),
+              }));
+              charIndex++;
+            } else {
+              clearInterval(typeInterval);
+              setIsTyping(false);
+              setCurrentTypingIndex(-1);
+            }
+          }, 20);
+        } else if (step.type === "code") {
+          setCodeStepComplete(true);
+        }
+
+        if (index === demoSteps.length - 1) {
+          setTimeout(() => setIsComplete(true), 1500);
+        }
+      }, step.delay);
+    });
+  }, [hasStarted, code, language]);
+
+  const restartDemo = () => {
+    setVisibleSteps([]);
+    setDisplayedText({});
+    setCodeStepComplete(false);
+    setIsComplete(false);
+    setHasStarted(false);
+    setTimeout(() => setHasStarted(true), 100);
   };
 
   return (
-    <TooltipProvider>
-      <motion.div 
-        ref={containerRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className={cn(
-          "rounded-xl overflow-hidden border border-border bg-card relative",
-          isFullscreen && "fixed inset-4 z-50 shadow-2xl flex flex-col"
-        )}
-      >
-        {/* Live Cursors */}
-        {currentRoomId && (
-          <>
-            <LiveCursors collaborators={collaborators} containerRef={containerRef} />
-            <CursorTracker onCursorMove={updateCursor} />
-          </>
-        )}
-
-        {/* Header */}
-        <motion.div 
-          className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b border-border"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="flex items-center gap-3">
-            {/* Language Badge */}
-            <motion.div 
-              className="flex items-center gap-2 px-2 py-1 rounded-md bg-background"
-              whileHover={{ scale: 1.02 }}
-            >
-              <Code2 className="w-4 h-4 text-primary" />
-              <span className="text-xs font-mono">{language}</span>
-            </motion.div>
-
-            {/* View Mode Tabs */}
-            {hasVisualPreview && (
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                <TabsList className="h-8">
-                  <TabsTrigger value="prototype" className="text-xs px-3 gap-1.5">
-                    <Eye className="w-3 h-3" />
-                    Preview
-                  </TabsTrigger>
-                  <TabsTrigger value="code" className="text-xs px-3 gap-1.5">
-                    <Code2 className="w-3 h-3" />
-                    Code
-                  </TabsTrigger>
-                  <TabsTrigger value="split" className="text-xs px-3 gap-1.5">
-                    <Columns className="w-3 h-3" />
-                    Split
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-
-            {/* Device Preview Selector */}
-            {(viewMode === "prototype" || viewMode === "split") && hasVisualPreview && (
-              <div className="flex items-center gap-1 bg-background rounded-lg p-1">
-                {[
-                  { value: "desktop" as const, icon: Monitor, label: "Desktop" },
-                  { value: "tablet" as const, icon: Tablet, label: "Tablet" },
-                  { value: "mobile" as const, icon: Smartphone, label: "Mobile" },
-                ].map(({ value, icon: Icon, label }) => (
-                  <Tooltip key={value}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={devicePreview === value ? "secondary" : "ghost"}
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setDevicePreview(value)}
-                      >
-                        <Icon className="w-3 h-3" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>{label}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            )}
+    <div className="glass-card rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-secondary/80 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-destructive" />
+            <div className="w-3 h-3 rounded-full bg-warning" />
+            <div className="w-3 h-3 rounded-full bg-success" />
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Realtime Activity Indicator */}
-            <AnimatePresence>
-              {isConnected && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 text-green-400"
-                >
-                  <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-xs">Live</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-1 bg-background rounded-lg p-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setZoom(Math.max(50, zoom - 25))}
-                    disabled={zoom <= 50}
-                  >
-                    <ZoomOut className="w-3 h-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Zoom Out</TooltipContent>
-              </Tooltip>
-              
-              <span className="text-xs text-muted-foreground w-10 text-center">{zoom}%</span>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setZoom(Math.min(200, zoom + 25))}
-                    disabled={zoom >= 200}
-                  >
-                    <ZoomIn className="w-3 h-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Zoom In</TooltipContent>
-              </Tooltip>
-            </div>
-
-            {/* Theme Toggle for Preview */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsDarkPreview(!isDarkPreview)}
-                >
-                  {isDarkPreview ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Toggle Preview Theme</TooltipContent>
-            </Tooltip>
-
-            {/* Design Token Sync */}
-            <Button
-              variant={showTokenSync ? "secondary" : "ghost"}
-              size="sm"
-              className="h-8 text-xs gap-1.5"
-              onClick={() => setShowTokenSync(!showTokenSync)}
-            >
-              <Zap className="w-3.5 h-3.5" />
-              Tokens
-              {showTokenSync ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </Button>
-
-            {/* Activity Panel */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={showActivity ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setShowActivity(!showActivity)}
-                >
-                  <Activity className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Realtime Activity</TooltipContent>
-            </Tooltip>
-
-            {/* Keyboard Shortcuts */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={showShortcuts ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setShowShortcuts(!showShortcuts)}
-                >
-                  <Keyboard className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Keyboard Shortcuts</TooltipContent>
-            </Tooltip>
-
-            <CollaborationPanel
-              roomId={currentRoomId}
-              collaborators={collaborators}
-              isConnected={isConnected}
-              currentUser={currentUser}
-              onJoinRoom={handleJoinRoom}
-              onCreateRoom={handleCreateRoom}
-            />
-            
-            <EditorExport code={code} language={language} />
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                >
-                  {isFullscreen ? <X className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen (⌘F)"}</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={onCopy}
-                >
-                  <AnimatePresence mode="wait">
-                    {copied ? (
-                      <motion.div
-                        key="check"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                      >
-                        <Check className="w-4 h-4 text-green-500" />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="copy"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Copy Code (⌘C)</TooltipContent>
-            </Tooltip>
-          </div>
-        </motion.div>
-
-        {/* Playback Controls Bar */}
-        <motion.div 
-          className="flex items-center justify-between px-4 py-2 bg-background/50 border-b border-border"
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleReset}>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Reset</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleStepBack} disabled={currentStep === 0}>
-                  <SkipBack className="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Step Back</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant={isPlaying ? "secondary" : "default"} 
-                  size="icon" 
-                  className="h-7 w-7" 
-                  onClick={() => setIsPlaying(!isPlaying)}
-                >
-                  {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{isPlaying ? "Pause" : "Play"}</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleStepForward} disabled={currentStep >= totalSteps - 1}>
-                  <SkipForward className="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Step Forward</TooltipContent>
-            </Tooltip>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              Line {currentStep + 1} / {totalSteps}
-            </span>
-            <div className="w-32">
-              <Slider
-                value={[currentStep]}
-                onValueChange={([v]) => setCurrentStep(v)}
-                max={totalSteps - 1}
-                step={1}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Speed:</span>
-            <div className="flex items-center gap-1">
-              {[0.5, 1, 2, 4].map((speed) => (
-                <Button
-                  key={speed}
-                  variant={playbackSpeed === speed ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setPlaybackSpeed(speed)}
-                >
-                  {speed}x
-                </Button>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Keyboard Shortcuts Panel */}
-        <AnimatePresence>
-          {showShortcuts && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="px-4 py-3 bg-muted/30 border-b border-border"
-            >
-              <div className="flex items-center gap-6 flex-wrap">
-                {KEYBOARD_SHORTCUTS.map(({ key, action }) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <kbd className="px-2 py-1 text-xs font-mono bg-background rounded border border-border">
-                      {key}
-                    </kbd>
-                    <span className="text-xs text-muted-foreground">{action}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Content Area */}
-        <div className={cn(
-          "flex-1 overflow-hidden",
-          isFullscreen ? "flex-1" : "max-h-[500px]"
-        )}>
-          {viewMode === "split" ? (
-            <div className="flex h-full">
-              {/* Code Panel */}
-              <div className="w-1/2 border-r border-border overflow-auto bg-[#1a1b26]">
-                <pre className="p-4 text-sm leading-relaxed m-0">
-                  <div className="flex">
-                    <div className="select-none pr-4 text-right text-[#565f89] font-mono text-xs border-r border-[#414868] mr-4 flex-shrink-0">
-                      {code.split('\n').map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={cn(
-                            "leading-relaxed transition-colors",
-                            i === currentStep && "bg-primary/20 text-primary"
-                          )}
-                        >
-                          {i + 1}
-                        </div>
-                      ))}
-                    </div>
-                    <code ref={codeRef} className={`language-${prismLanguage} font-mono text-xs`}>
-                      {code}
-                    </code>
-                  </div>
-                </pre>
-              </div>
-              
-              {/* Preview Panel */}
-              <div className="w-1/2 overflow-auto">
-                <VisualPrototype code={code} language={language} />
-              </div>
-            </div>
-          ) : viewMode === "prototype" && hasVisualPreview ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top left" }}
-            >
-              <VisualPrototype code={code} language={language} />
-            </motion.div>
-          ) : (
-            <div className={cn(
-              "overflow-auto bg-[#1a1b26]",
-              isFullscreen ? "h-full" : "max-h-[500px]"
-            )}>
-              <pre className="p-4 text-sm leading-relaxed m-0">
-                <div className="flex">
-                  <div className="select-none pr-4 text-right text-[#565f89] font-mono text-xs border-r border-[#414868] mr-4 flex-shrink-0">
-                    {code.split('\n').map((_, i) => (
-                      <motion.div 
-                        key={i} 
-                        className={cn(
-                          "leading-relaxed transition-colors",
-                          i === currentStep && "bg-primary/20 text-primary rounded"
-                        )}
-                        animate={{ 
-                          backgroundColor: i === currentStep ? "rgba(34, 211, 238, 0.2)" : "transparent"
-                        }}
-                      >
-                        {i + 1}
-                      </motion.div>
-                    ))}
-                  </div>
-                  <code ref={codeRef} className={`language-${prismLanguage} font-mono text-xs`}>
-                    {code}
-                  </code>
-                </div>
-              </pre>
-            </div>
-          )}
+          <span className="text-sm font-mono text-muted-foreground">Code Preview</span>
         </div>
-
-        {/* Realtime Activity Panel */}
-        <AnimatePresence>
-          {showActivity && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 120 }}
-              exit={{ opacity: 0, height: 0 }}
-              className="border-t border-border bg-background/80 overflow-hidden"
+        <div className="flex items-center gap-2">
+          {isComplete && (
+            <button
+              onClick={restartDemo}
+              className="text-xs text-primary hover:text-primary/80 transition-colors"
             >
-              <div className="p-3 h-full overflow-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <Activity className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-medium">Realtime Updates</span>
-                  {isPlaying && (
-                    <Badge variant="secondary" className="text-xs animate-pulse">
-                      Recording
-                    </Badge>
-                  )}
+              Replay
+            </button>
+          )}
+          <button
+            onClick={onCopy}
+            className="p-1.5 hover:bg-background/50 rounded transition-colors"
+            title="Copy code"
+          >
+            {copied ? (
+              <Check className="w-4 h-4 text-success" />
+            ) : (
+              <Copy className="w-4 h-4 text-muted-foreground" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Chat Area */}
+      <div className="p-6 space-y-4 min-h-[400px] max-h-[600px] overflow-y-auto">
+        {visibleSteps.map((stepIndex) => {
+          const step = demoSteps[stepIndex];
+          const text = displayedText[stepIndex] || "";
+          const isCurrentlyTyping = currentTypingIndex === stepIndex;
+
+          if (step.type === "user") {
+            return (
+              <div key={stepIndex} className="flex items-start gap-3 animate-fade-in">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-primary" />
                 </div>
-                <div className="space-y-1 font-mono text-xs">
-                  {realtimeUpdates.length === 0 ? (
-                    <p className="text-muted-foreground italic">Press play to see realtime updates...</p>
-                  ) : (
-                    realtimeUpdates.map((update, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="text-muted-foreground"
-                      >
-                        {update}
-                      </motion.div>
-                    ))
-                  )}
+                <div className="bg-primary/10 rounded-2xl rounded-tl-none px-4 py-3 max-w-[80%]">
+                  <p className="text-sm">
+                    {text}
+                    {isCurrentlyTyping && <span className="animate-pulse">|</span>}
+                  </p>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            );
+          }
 
-        {/* Design Token Sync Panel */}
-        <AnimatePresence>
-          {showTokenSync && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <DesignTokenSync code={code} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </TooltipProvider>
+          if (step.type === "status") {
+            return (
+              <div key={stepIndex} className="flex items-center gap-2 text-sm text-muted-foreground animate-fade-in pl-11">
+                {step.content.includes("✓") ? (
+                  <CheckCircle2 className="w-4 h-4 text-success" />
+                ) : (
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                )}
+                <span>{step.content}</span>
+              </div>
+            );
+          }
+
+          if (step.type === "agent") {
+            return (
+              <div key={stepIndex} className="flex items-start gap-3 animate-fade-in">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <div className="bg-secondary/80 rounded-2xl rounded-tl-none px-4 py-3 max-w-[80%]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium text-primary">{language.toUpperCase()} Agent</span>
+                    <Sparkles className="w-3 h-3 text-primary" />
+                  </div>
+                  <p className="text-sm">
+                    {text}
+                    {isCurrentlyTyping && <span className="animate-pulse">|</span>}
+                  </p>
+                </div>
+              </div>
+            );
+          }
+
+          if (step.type === "code") {
+            return (
+              <div key={stepIndex} className="animate-fade-in pl-11">
+                <AnimatedCodeBlock code={step.content} isComplete={codeStepComplete} language={language} />
+              </div>
+            );
+          }
+
+          return null;
+        })}
+
+        {visibleSteps.length === 0 && (
+          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+            <div className="text-center">
+              <Sparkles className="w-8 h-8 mx-auto mb-3 text-primary animate-pulse" />
+              <p className="text-sm">Initializing preview...</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
