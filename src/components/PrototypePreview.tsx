@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Bot, User, Sparkles, CheckCircle2, Code2, Loader2, Eye, Copy, Check } from "lucide-react";
+import { Bot, User, Sparkles, CheckCircle2, Code2, Loader2, Eye, Copy, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LiveProvider, LivePreview as ReactLivePreview, LiveError } from "react-live";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -14,23 +15,97 @@ interface PrototypePreviewProps {
   roomId?: string;
 }
 
-// Live Preview Component for React/TSX code
-const LivePreview = ({ code }: { code: string }) => {
-  // Simple preview simulation
-  return (
-    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 text-white">
-      <div className="text-center">
-        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/20 flex items-center justify-center">
-          <Eye className="w-6 h-6 text-primary" />
+// Scope with common React patterns and UI components for live preview
+const liveScope = {
+  useState,
+  useEffect,
+  useRef,
+  // Common icons
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  Eye,
+  Code2,
+  // Allow className utility
+  cn,
+};
+
+// Clean and prepare code for react-live
+const prepareCodeForLive = (code: string): string => {
+  let cleanCode = code
+    // Remove import statements
+    .replace(/^import\s+.*?;?\s*$/gm, '')
+    // Remove export default/export statements
+    .replace(/^export\s+default\s+/gm, '')
+    .replace(/^export\s+/gm, '')
+    // Remove TypeScript type annotations
+    .replace(/:\s*React\.FC(<[^>]*>)?/g, '')
+    .replace(/:\s*\w+(\[\])?(\s*\|\s*\w+(\[\])?)*(?=\s*[=,\)\}])/g, '')
+    .replace(/<[A-Z][A-Za-z]*Props>/g, '')
+    // Remove interface/type declarations
+    .replace(/^(interface|type)\s+\w+\s*(\{[\s\S]*?\}|=[\s\S]*?);?\s*$/gm, '')
+    .trim();
+
+  // If it's a function component, extract just the render part
+  const functionMatch = cleanCode.match(/(?:const|function)\s+\w+\s*=?\s*\([^)]*\)\s*(?::\s*\w+\s*)?(?:=>)?\s*\{?([\s\S]*)\}?$/);
+  
+  if (functionMatch) {
+    // Extract the return statement content
+    const returnMatch = cleanCode.match(/return\s*\(\s*([\s\S]*)\s*\)\s*;?\s*\}?\s*$/);
+    if (returnMatch) {
+      cleanCode = returnMatch[1].trim();
+    }
+  }
+
+  // If it starts with JSX already, use it directly
+  if (cleanCode.startsWith('<') || cleanCode.startsWith('(')) {
+    cleanCode = cleanCode.replace(/^\(/, '').replace(/\);?\s*$/, '').trim();
+  }
+
+  // Wrap in a fragment if there are multiple root elements
+  if (!cleanCode.startsWith('<') && !cleanCode.match(/^[\s\S]*<\w/)) {
+    cleanCode = `<div className="p-4 text-foreground">${cleanCode}</div>`;
+  }
+
+  return cleanCode;
+};
+
+// Live Preview Component for React/TSX code using react-live
+const LivePreview = ({ code, language }: { code: string; language: string }) => {
+  const [hasError, setHasError] = useState(false);
+  const isReactCode = ["jsx", "tsx", "javascript", "typescript"].includes(language.toLowerCase());
+
+  if (!isReactCode) {
+    return (
+      <div className="bg-secondary rounded-xl p-6 border border-border">
+        <div className="text-center text-muted-foreground">
+          <Code2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Preview available for React/JSX code only</p>
         </div>
-        <h3 className="text-lg font-semibold mb-2">Live Preview</h3>
-        <p className="text-sm text-gray-400">Interactive component rendering</p>
       </div>
+    );
+  }
+
+  const preparedCode = prepareCodeForLive(code);
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-border bg-background">
+      <div className="flex items-center gap-2 px-4 py-2 bg-secondary/50 border-b border-border">
+        <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+        <span className="text-xs font-medium text-muted-foreground">Live Preview</span>
+      </div>
+      <LiveProvider code={preparedCode} scope={liveScope} noInline={false}>
+        <div className="p-4 min-h-[100px] bg-background">
+          <ReactLivePreview />
+        </div>
+        <LiveError 
+          className="p-3 text-xs font-mono text-destructive bg-destructive/10 border-t border-destructive/20" 
+        />
+      </LiveProvider>
     </div>
   );
 };
 
-// Syntax Highlighted Code with Line-by-Line Animation
 const AnimatedCodeBlock = ({ 
   code, 
   isComplete,
@@ -83,31 +158,31 @@ const AnimatedCodeBlock = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-gray-900 rounded-lg overflow-hidden">
+      <div className="bg-secondary rounded-lg overflow-hidden border border-border">
         {/* Code Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+        <div className="flex items-center justify-between px-4 py-2 bg-muted border-b border-border">
           <div className="flex items-center gap-2">
             <Code2 className="w-4 h-4 text-primary" />
-            <span className="text-xs font-mono text-gray-400">component.{language}</span>
+            <span className="text-xs font-mono text-muted-foreground">component.{language}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              className="p-1 hover:bg-accent rounded transition-colors"
               title="Copy code"
             >
               {copied ? (
                 <Check className="w-4 h-4 text-success" />
               ) : (
-                <Copy className="w-4 h-4 text-gray-400" />
+                <Copy className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
-            {showPreview && canShowVisualPreview && (
+            {visibleLines >= lines.length && canShowVisualPreview && (
               <button
                 onClick={() => setShowPreview(!showPreview)}
                 className={cn(
                   "p-1 rounded transition-colors",
-                  showPreview ? "bg-primary/20 text-primary" : "hover:bg-gray-700 text-gray-400"
+                  showPreview ? "bg-primary/20 text-primary" : "hover:bg-accent text-muted-foreground"
                 )}
                 title="Toggle preview"
               >
@@ -118,11 +193,11 @@ const AnimatedCodeBlock = ({
         </div>
 
         {/* Code Content with Line Numbers */}
-        <div className="relative overflow-x-auto">
+        <div className="relative overflow-x-auto bg-secondary/50">
           <pre className="p-4 text-sm leading-relaxed">
             <div className="flex">
               {/* Line Numbers */}
-              <div className="select-none pr-4 text-right text-gray-600 font-mono text-xs border-r border-gray-700 mr-4">
+              <div className="select-none pr-4 text-right text-muted-foreground/50 font-mono text-xs border-r border-border mr-4">
                 {lines.slice(0, visibleLines).map((_, i) => (
                   <div key={i} className="leading-relaxed">{i + 1}</div>
                 ))}
@@ -145,12 +220,7 @@ const AnimatedCodeBlock = ({
       {/* Live Preview Panel */}
       {showPreview && canShowVisualPreview && (
         <div className="animate-fade-in">
-          <div className="flex items-center gap-2 mb-3">
-            <Eye className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Live Preview</span>
-            <span className="text-xs text-muted-foreground">(Interactive)</span>
-          </div>
-          <LivePreview code={code} />
+          <LivePreview code={code} language={language} />
         </div>
       )}
     </div>
