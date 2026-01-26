@@ -4,27 +4,17 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { 
-  Bot, 
-  ArrowLeft,
-  User as UserIcon,
-  Mail,
-  Calendar,
-  Shield,
-  Loader2
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Bot, ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { ProfileForm } from "@/components/profile/ProfileForm";
 
 const Profile = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -39,6 +29,7 @@ const Profile = () => {
       setUser(session?.user ?? null);
       if (session?.user) {
         setDisplayName(session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || '');
+        setAvatarUrl(session.user.user_metadata?.avatar_url || null);
       }
       setLoading(false);
       if (!session) {
@@ -49,32 +40,6 @@ const Profile = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleUpdateProfile = async () => {
-    if (!user) return;
-    
-    setIsSaving(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: { display_name: displayName }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update profile",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -83,11 +48,7 @@ const Profile = () => {
     );
   }
 
-  const createdAt = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }) : 'Unknown';
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -123,84 +84,20 @@ const Profile = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
+          className="space-y-6"
         >
-          {/* Profile Header */}
-          <div className="glass-card p-8 rounded-xl mb-6">
-            <div className="flex items-center gap-6 mb-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-3xl font-bold text-primary-foreground">
-                {user?.email?.[0].toUpperCase() || 'U'}
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">{displayName || user?.email?.split('@')[0]}</h1>
-                <p className="text-muted-foreground">{user?.email}</p>
-              </div>
-            </div>
+          <ProfileHeader
+            user={user}
+            displayName={displayName}
+            avatarUrl={avatarUrl}
+            onAvatarChange={setAvatarUrl}
+          />
 
-            <div className="grid gap-4">
-              <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Email:</span>
-                <span>{user?.email}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Member since:</span>
-                <span>{createdAt}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Shield className="w-4 h-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Auth provider:</span>
-                <span className="capitalize">{user?.app_metadata?.provider || 'Email'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Edit Profile */}
-          <div className="glass-card p-8 rounded-xl">
-            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
-              <UserIcon className="w-5 h-5" />
-              Edit Profile
-            </h2>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Enter your display name"
-                  className="bg-secondary/30"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  value={user?.email || ''}
-                  disabled
-                  className="bg-secondary/30 opacity-60"
-                />
-                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-              </div>
-
-              <Button 
-                onClick={handleUpdateProfile} 
-                disabled={isSaving}
-                className="w-full"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </div>
-          </div>
+          <ProfileForm
+            email={user.email || ''}
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+          />
         </motion.div>
       </main>
     </div>
