@@ -32,42 +32,58 @@ const liveScope = {
 
 // Clean and prepare code for react-live
 const prepareCodeForLive = (code: string): string => {
-  let cleanCode = code
-    // Remove import statements
-    .replace(/^import\s+.*?;?\s*$/gm, '')
-    // Remove export default/export statements
-    .replace(/^export\s+default\s+/gm, '')
-    .replace(/^export\s+/gm, '')
-    // Remove TypeScript type annotations
-    .replace(/:\s*React\.FC(<[^>]*>)?/g, '')
-    .replace(/:\s*\w+(\[\])?(\s*\|\s*\w+(\[\])?)*(?=\s*[=,\)\}])/g, '')
-    .replace(/<[A-Z][A-Za-z]*Props>/g, '')
-    // Remove interface/type declarations
-    .replace(/^(interface|type)\s+\w+\s*(\{[\s\S]*?\}|=[\s\S]*?);?\s*$/gm, '')
-    .trim();
-
-  // If it's a function component, extract just the render part
-  const functionMatch = cleanCode.match(/(?:const|function)\s+\w+\s*=?\s*\([^)]*\)\s*(?::\s*\w+\s*)?(?:=>)?\s*\{?([\s\S]*)\}?$/);
+  let cleanCode = code.trim();
   
-  if (functionMatch) {
-    // Extract the return statement content
-    const returnMatch = cleanCode.match(/return\s*\(\s*([\s\S]*)\s*\)\s*;?\s*\}?\s*$/);
-    if (returnMatch) {
-      cleanCode = returnMatch[1].trim();
+  // Remove import statements (multiline and single line)
+  cleanCode = cleanCode.replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '');
+  cleanCode = cleanCode.replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '');
+  
+  // Remove export statements
+  cleanCode = cleanCode.replace(/^export\s+default\s+/gm, '');
+  cleanCode = cleanCode.replace(/^export\s+/gm, '');
+  
+  // Remove TypeScript type annotations more carefully
+  cleanCode = cleanCode.replace(/:\s*React\.FC(<[^>]*>)?/g, '');
+  cleanCode = cleanCode.replace(/:\s*React\.ReactNode/g, '');
+  cleanCode = cleanCode.replace(/:\s*JSX\.Element/g, '');
+  
+  // Remove interface/type declarations (multi-line)
+  cleanCode = cleanCode.replace(/^interface\s+\w+\s*\{[\s\S]*?\}\s*$/gm, '');
+  cleanCode = cleanCode.replace(/^type\s+\w+\s*=[\s\S]*?;\s*$/gm, '');
+  
+  cleanCode = cleanCode.trim();
+  
+  // Try to extract JSX from a function component
+  // Match: const ComponentName = () => { ... return (...) }
+  // Or: function ComponentName() { ... return (...) }
+  const returnMatch = cleanCode.match(/return\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*\}?\s*;?\s*$/);
+  if (returnMatch && returnMatch[1]) {
+    const jsxContent = returnMatch[1].trim();
+    // Verify it looks like JSX
+    if (jsxContent.startsWith('<')) {
+      return jsxContent;
     }
   }
-
-  // If it starts with JSX already, use it directly
-  if (cleanCode.startsWith('<') || cleanCode.startsWith('(')) {
-    cleanCode = cleanCode.replace(/^\(/, '').replace(/\);?\s*$/, '').trim();
+  
+  // If the code is already JSX (starts with <)
+  if (cleanCode.startsWith('<')) {
+    return cleanCode;
   }
-
-  // Wrap in a fragment if there are multiple root elements
-  if (!cleanCode.startsWith('<') && !cleanCode.match(/^[\s\S]*<\w/)) {
-    cleanCode = `<div className="p-4 text-foreground">${cleanCode}</div>`;
+  
+  // If wrapped in parentheses, extract content
+  const parenMatch = cleanCode.match(/^\(\s*([\s\S]*?)\s*\)$/);
+  if (parenMatch && parenMatch[1]?.trim().startsWith('<')) {
+    return parenMatch[1].trim();
   }
-
-  return cleanCode;
+  
+  // Look for JSX anywhere in the code
+  const jsxMatch = cleanCode.match(/(<[A-Z][a-zA-Z]*[\s\S]*?>[\s\S]*?<\/[A-Z][a-zA-Z]*>|<[a-z][a-zA-Z]*[\s\S]*?\/>|<[a-z][a-zA-Z]*[\s\S]*?>[\s\S]*?<\/[a-z][a-zA-Z]*>)/);
+  if (jsxMatch) {
+    return jsxMatch[1];
+  }
+  
+  // Fallback: wrap plain content
+  return `<div className="p-4 text-foreground">${cleanCode}</div>`;
 };
 
 // Live Preview Component for React/TSX code using react-live
@@ -116,7 +132,7 @@ const AnimatedCodeBlock = ({
   language: string;
 }) => {
   const [visibleLines, setVisibleLines] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true); // Show preview by default
   const [copied, setCopied] = useState(false);
   const codeRef = useRef<HTMLElement>(null);
   const lines = code.split("\n");
@@ -124,7 +140,6 @@ const AnimatedCodeBlock = ({
   useEffect(() => {
     if (!isComplete) {
       setVisibleLines(0);
-      setShowPreview(false);
       return;
     }
 
@@ -134,7 +149,6 @@ const AnimatedCodeBlock = ({
       setVisibleLines(currentLine);
       if (currentLine >= lines.length) {
         clearInterval(interval);
-        setTimeout(() => setShowPreview(true), 500);
       }
     }, 80);
 
