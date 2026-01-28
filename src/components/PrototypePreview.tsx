@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 import * as LucideIcons from "lucide-react";
-import { Bot, User, Sparkles, CheckCircle2, Code2, Loader2, Eye, Copy, Check, AlertCircle } from "lucide-react";
+import { Bot, User, Sparkles, CheckCircle2, Code2, Loader2, Eye, Copy, Check, AlertCircle, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LiveProvider, LivePreview as ReactLivePreview, LiveError } from "react-live";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { EnhancedLivePreview } from "@/components/EnhancedLivePreview";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -167,7 +169,8 @@ const AnimatedCodeBlock = ({
   language: string;
 }) => {
   const [visibleLines, setVisibleLines] = useState(0);
-  const [showPreview, setShowPreview] = useState(true); // Show preview by default
+  const [showPreview, setShowPreview] = useState(true);
+  const [showEnhancedPreview, setShowEnhancedPreview] = useState(false);
   const [copied, setCopied] = useState(false);
   const codeRef = useRef<HTMLElement>(null);
   const lines = code.split("\n");
@@ -236,16 +239,25 @@ const AnimatedCodeBlock = ({
               )}
             </button>
             {visibleLines >= lines.length && canShowVisualPreview && (
-              <button
-                onClick={() => setShowPreview(!showPreview)}
-                className={cn(
-                  "p-1 rounded transition-colors",
-                  showPreview ? "bg-primary/20 text-primary" : "hover:bg-accent text-muted-foreground"
-                )}
-                title="Toggle preview"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
+              <>
+                <button
+                  onClick={() => setShowPreview(!showPreview)}
+                  className={cn(
+                    "p-1 rounded transition-colors",
+                    showPreview ? "bg-primary/20 text-primary" : "hover:bg-accent text-muted-foreground"
+                  )}
+                  title="Toggle preview"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowEnhancedPreview(true)}
+                  className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
+                  title="Open enhanced preview"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -281,6 +293,17 @@ const AnimatedCodeBlock = ({
           <LivePreview code={code} language={language} />
         </div>
       )}
+
+      {/* Enhanced Preview Dialog */}
+      <Dialog open={showEnhancedPreview} onOpenChange={setShowEnhancedPreview}>
+        <DialogContent className="max-w-[90vw] w-[1400px] h-[85vh] p-0 gap-0">
+          <EnhancedLivePreview 
+            code={code} 
+            language={language} 
+            onClose={() => setShowEnhancedPreview(false)} 
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
