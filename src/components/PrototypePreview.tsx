@@ -1,7 +1,16 @@
+import * as React from "react";
 import { useState, useEffect, useRef } from "react";
+import * as LucideIcons from "lucide-react";
 import { Bot, User, Sparkles, CheckCircle2, Code2, Loader2, Eye, Copy, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LiveProvider, LivePreview as ReactLivePreview, LiveError } from "react-live";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -17,9 +26,26 @@ interface PrototypePreviewProps {
 
 // Scope with common React patterns and UI components for live preview
 const liveScope = {
+  React,
+  ...LucideIcons,
   useState,
   useEffect,
   useRef,
+
+  // Common UI components (so generated snippets render without imports)
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  Input,
+  Textarea,
+  Label,
+  Badge,
+  Separator,
+
   // Common icons
   CheckCircle2,
   AlertCircle,
@@ -89,7 +115,16 @@ const prepareCodeForLive = (code: string): string => {
 // Live Preview Component for React/TSX code using react-live
 const LivePreview = ({ code, language }: { code: string; language: string }) => {
   const [hasError, setHasError] = useState(false);
-  const isReactCode = ["jsx", "tsx", "javascript", "typescript"].includes(language.toLowerCase());
+  const lang = language.toLowerCase();
+  const isReactCode = [
+    "jsx",
+    "tsx",
+    "js",
+    "javascript",
+    "ts",
+    "typescript",
+    "react",
+  ].includes(lang);
 
   if (!isReactCode) {
     return (
@@ -168,7 +203,16 @@ const AnimatedCodeBlock = ({
   };
 
   const displayedCode = lines.slice(0, visibleLines).join("\n");
-  const canShowVisualPreview = ["jsx", "tsx", "html", "htm", "css"].includes(language.toLowerCase());
+  // Only show the live React preview for React-ish languages. (HTML/CSS previews would need a different renderer.)
+  const canShowVisualPreview = [
+    "jsx",
+    "tsx",
+    "js",
+    "javascript",
+    "ts",
+    "typescript",
+    "react",
+  ].includes(language.toLowerCase());
 
   return (
     <div className="space-y-4">
