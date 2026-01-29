@@ -114,26 +114,82 @@ const prepareCodeForLive = (code: string): string => {
   return `<div className="p-4 text-foreground">${cleanCode}</div>`;
 };
 
+// Check if language is a backend/non-web language that can't be previewed in browser
+const isBackendLanguage = (lang: string): boolean => {
+  const backendLangs = ['python', 'py', 'java', 'c', 'cpp', 'c++', 'csharp', 'cs', 'go', 'rust', 'ruby', 'php', 'swift', 'kotlin'];
+  return backendLangs.includes(lang.toLowerCase());
+};
+
+// Check if language is a web/React language that can be live-previewed
+const isWebPreviewable = (lang: string): boolean => {
+  const webLangs = ['jsx', 'tsx', 'js', 'javascript', 'ts', 'typescript', 'react', 'html'];
+  return webLangs.includes(lang.toLowerCase());
+};
+
+// Get friendly language name and run instructions
+const getLanguageInfo = (lang: string): { name: string; runCommand: string; icon: string } => {
+  const langMap: Record<string, { name: string; runCommand: string; icon: string }> = {
+    python: { name: 'Python', runCommand: 'python filename.py', icon: '🐍' },
+    py: { name: 'Python', runCommand: 'python filename.py', icon: '🐍' },
+    java: { name: 'Java', runCommand: 'javac filename.java && java ClassName', icon: '☕' },
+    c: { name: 'C', runCommand: 'gcc filename.c -o output && ./output', icon: '⚙️' },
+    cpp: { name: 'C++', runCommand: 'g++ filename.cpp -o output && ./output', icon: '⚙️' },
+    'c++': { name: 'C++', runCommand: 'g++ filename.cpp -o output && ./output', icon: '⚙️' },
+    go: { name: 'Go', runCommand: 'go run filename.go', icon: '🔵' },
+    rust: { name: 'Rust', runCommand: 'cargo run', icon: '🦀' },
+    ruby: { name: 'Ruby', runCommand: 'ruby filename.rb', icon: '💎' },
+    php: { name: 'PHP', runCommand: 'php filename.php', icon: '🐘' },
+  };
+  return langMap[lang.toLowerCase()] || { name: lang.toUpperCase(), runCommand: `Run the ${lang} file locally`, icon: '📄' };
+};
+
 // Live Preview Component for React/TSX code using react-live
 const LivePreview = ({ code, language }: { code: string; language: string }) => {
-  const [hasError, setHasError] = useState(false);
   const lang = language.toLowerCase();
-  const isReactCode = [
-    "jsx",
-    "tsx",
-    "js",
-    "javascript",
-    "ts",
-    "typescript",
-    "react",
-  ].includes(lang);
+  
+  // For backend languages, show a helpful "run locally" message
+  if (isBackendLanguage(lang)) {
+    const langInfo = getLanguageInfo(lang);
+    return (
+      <div className="bg-gradient-to-br from-secondary to-secondary/50 rounded-xl p-6 border border-border">
+        <div className="text-center space-y-4">
+          <div className="text-4xl">{langInfo.icon}</div>
+          <div>
+            <h3 className="font-semibold text-foreground mb-1">{langInfo.name} Code Generated</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              This is {langInfo.name} code that runs on your local machine, not in the browser.
+            </p>
+          </div>
+          <div className="bg-background/80 rounded-lg p-4 text-left">
+            <p className="text-xs text-muted-foreground mb-2">To run this code:</p>
+            <ol className="text-sm space-y-2 text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0">1</span>
+                <span>Copy the code using the copy button above</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0">2</span>
+                <span>Save it to a file on your computer</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0">3</span>
+                <span>Run: <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono">{langInfo.runCommand}</code></span>
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (!isReactCode) {
+  // For non-web languages, show generic message
+  if (!isWebPreviewable(lang)) {
     return (
       <div className="bg-secondary rounded-xl p-6 border border-border">
         <div className="text-center text-muted-foreground">
           <Code2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Preview available for React/JSX code only</p>
+          <p className="text-sm">Live preview available for React/JSX code only</p>
+          <p className="text-xs mt-1">Copy the code and run it in your local environment</p>
         </div>
       </div>
     );
@@ -206,16 +262,12 @@ const AnimatedCodeBlock = ({
   };
 
   const displayedCode = lines.slice(0, visibleLines).join("\n");
-  // Only show the live React preview for React-ish languages. (HTML/CSS previews would need a different renderer.)
-  const canShowVisualPreview = [
-    "jsx",
-    "tsx",
-    "js",
-    "javascript",
-    "ts",
-    "typescript",
-    "react",
-  ].includes(language.toLowerCase());
+  
+  // Show preview panel for web languages OR backend languages (with run instructions)
+  const lang = language.toLowerCase();
+  const canShowVisualPreview = isWebPreviewable(lang) || isBackendLanguage(lang);
+  // Only show enhanced preview button for web-previewable languages
+  const canShowEnhancedPreview = isWebPreviewable(lang);
 
   return (
     <div className="space-y-4">
@@ -239,25 +291,25 @@ const AnimatedCodeBlock = ({
               )}
             </button>
             {visibleLines >= lines.length && canShowVisualPreview && (
-              <>
-                <button
-                  onClick={() => setShowPreview(!showPreview)}
-                  className={cn(
-                    "p-1 rounded transition-colors",
-                    showPreview ? "bg-primary/20 text-primary" : "hover:bg-accent text-muted-foreground"
-                  )}
-                  title="Toggle preview"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setShowEnhancedPreview(true)}
-                  className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
-                  title="Open enhanced preview"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                </button>
-              </>
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className={cn(
+                  "p-1 rounded transition-colors",
+                  showPreview ? "bg-primary/20 text-primary" : "hover:bg-accent text-muted-foreground"
+                )}
+                title="Toggle preview"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            )}
+            {visibleLines >= lines.length && canShowEnhancedPreview && (
+              <button
+                onClick={() => setShowEnhancedPreview(true)}
+                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
+                title="Open enhanced preview"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
             )}
           </div>
         </div>
@@ -294,16 +346,18 @@ const AnimatedCodeBlock = ({
         </div>
       )}
 
-      {/* Enhanced Preview Dialog */}
-      <Dialog open={showEnhancedPreview} onOpenChange={setShowEnhancedPreview}>
-        <DialogContent className="max-w-[90vw] w-[1400px] h-[85vh] p-0 gap-0">
-          <EnhancedLivePreview 
-            code={code} 
-            language={language} 
-            onClose={() => setShowEnhancedPreview(false)} 
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Enhanced Preview Dialog - only for web-previewable languages */}
+      {canShowEnhancedPreview && (
+        <Dialog open={showEnhancedPreview} onOpenChange={setShowEnhancedPreview}>
+          <DialogContent className="max-w-[90vw] w-[1400px] h-[85vh] p-0 gap-0">
+            <EnhancedLivePreview 
+              code={code} 
+              language={language} 
+              onClose={() => setShowEnhancedPreview(false)} 
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
