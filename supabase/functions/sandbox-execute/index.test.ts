@@ -39,7 +39,6 @@ Deno.test("sandbox-execute: should validate required fields", async () => {
   const data = await response.json();
   assertEquals(data.status, "error");
   assertExists(data.errors);
-  await response.text(); // Consume body
 });
 
 Deno.test("sandbox-execute: should execute Python code successfully", async () => {
