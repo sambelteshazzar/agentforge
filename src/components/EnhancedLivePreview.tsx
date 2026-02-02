@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { PreviewControls, DevicePreset, ViewMode, devicePresets } from "@/components/PreviewControls";
+import { prepareCodeForLive } from "@/lib/preview/prepareCodeForLive";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -47,91 +48,6 @@ const liveScope = {
   AlertCircle,
   Sparkles,
   cn,
-};
-
-// Clean and prepare code for react-live
-const prepareCodeForLive = (code: string): string => {
-  let cleanCode = code.trim();
-  
-  // Remove import statements
-  cleanCode = cleanCode.replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '');
-  cleanCode = cleanCode.replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '');
-  
-  // Remove export statements but keep the rest
-  cleanCode = cleanCode.replace(/^export\s+default\s+/gm, '');
-  cleanCode = cleanCode.replace(/^export\s+(?=const|function|class)/gm, '');
-  
-  // Remove TypeScript type annotations carefully
-  cleanCode = cleanCode.replace(/:\s*React\.FC(<[^>]*>)?/g, '');
-  cleanCode = cleanCode.replace(/:\s*React\.ReactNode/g, '');
-  cleanCode = cleanCode.replace(/:\s*JSX\.Element/g, '');
-  cleanCode = cleanCode.replace(/(\([^)]*?):\s*\w+(\s*[,)])/g, '$1$2');
-  cleanCode = cleanCode.replace(/\)\s*:\s*[\w<>[\]|&\s]+(?=\s*[{=])/g, ')');
-  
-  // Remove interface/type declarations
-  cleanCode = cleanCode.replace(/^interface\s+\w+\s*\{[\s\S]*?\}\s*$/gm, '');
-  cleanCode = cleanCode.replace(/^type\s+\w+\s*=[\s\S]*?;\s*$/gm, '');
-  
-  cleanCode = cleanCode.trim();
-  
-  // If already JSX, return directly
-  if (cleanCode.startsWith('<')) {
-    return cleanCode;
-  }
-  
-  // Check for function component pattern
-  const functionComponentMatch = cleanCode.match(
-    /^(?:const|let|var)\s+(\w+)\s*=\s*(?:\([^)]*\)|[^=]*)?\s*=>\s*\{[\s\S]*?return\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*\}\s*;?\s*$/
-  ) || cleanCode.match(
-    /^function\s+(\w+)\s*\([^)]*\)\s*\{[\s\S]*?return\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*\}\s*$/
-  );
-  
-  if (functionComponentMatch && functionComponentMatch[2]) {
-    const jsxContent = functionComponentMatch[2].trim();
-    if (jsxContent.startsWith('<')) {
-      return jsxContent;
-    }
-  }
-  
-  // Try to find return statement with JSX
-  const returnMatch = cleanCode.match(/return\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*\}?\s*;?\s*$/);
-  if (returnMatch && returnMatch[1]) {
-    const jsxContent = returnMatch[1].trim();
-    if (jsxContent.startsWith('<')) {
-      return jsxContent;
-    }
-  }
-  
-  // Handle arrow function returning JSX directly
-  const arrowJsxMatch = cleanCode.match(/=>\s*(<[\s\S]+>)\s*;?\s*$/);
-  if (arrowJsxMatch && arrowJsxMatch[1]) {
-    return arrowJsxMatch[1].trim();
-  }
-  
-  // If wrapped in parentheses, extract content
-  const parenMatch = cleanCode.match(/^\(\s*([\s\S]*?)\s*\)$/);
-  if (parenMatch && parenMatch[1]?.trim().startsWith('<')) {
-    return parenMatch[1].trim();
-  }
-  
-  // For plain JS without JSX, display it nicely
-  if (!cleanCode.includes('<') && !cleanCode.includes('return')) {
-    const escapedCode = cleanCode.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    return `<div className="p-4 font-mono text-sm bg-muted rounded-lg">
-      <div className="text-muted-foreground text-xs mb-2">JavaScript Output:</div>
-      <pre className="text-foreground whitespace-pre-wrap">${escapedCode}</pre>
-    </div>`;
-  }
-  
-  // Look for any JSX element
-  const jsxMatch = cleanCode.match(/(<[A-Z][a-zA-Z]*[\s\S]*?>[\s\S]*?<\/[A-Z][a-zA-Z]*>|<[a-z][a-zA-Z]*[\s\S]*?\/>|<[a-z][a-zA-Z]*[\s\S]*?>[\s\S]*?<\/[a-z][a-zA-Z]*>)/);
-  if (jsxMatch) {
-    return jsxMatch[1];
-  }
-
-  // Fallback display
-  const escapedFallback = cleanCode.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-  return `<div className="p-4 font-mono text-sm text-foreground"><pre>${escapedFallback}</pre></div>`;
 };
 
 // Code panel component
