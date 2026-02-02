@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { EnhancedLivePreview } from "@/components/EnhancedLivePreview";
+import { prepareCodeForLive } from "@/lib/preview/prepareCodeForLive";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -56,96 +57,6 @@ const liveScope = {
   Code2,
   // Allow className utility
   cn,
-};
-
-// Clean and prepare code for react-live
-const prepareCodeForLive = (code: string): string => {
-  let cleanCode = code.trim();
-  
-  // Remove import statements (multiline and single line)
-  cleanCode = cleanCode.replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '');
-  cleanCode = cleanCode.replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '');
-  
-  // Remove export statements but keep the rest
-  cleanCode = cleanCode.replace(/^export\s+default\s+/gm, '');
-  cleanCode = cleanCode.replace(/^export\s+(?=const|function|class)/gm, '');
-  
-  // Remove TypeScript type annotations carefully
-  cleanCode = cleanCode.replace(/:\s*React\.FC(<[^>]*>)?/g, '');
-  cleanCode = cleanCode.replace(/:\s*React\.ReactNode/g, '');
-  cleanCode = cleanCode.replace(/:\s*JSX\.Element/g, '');
-  // Remove function parameter type annotations: (props: Type) -> (props)
-  cleanCode = cleanCode.replace(/(\([^)]*?):\s*\w+(\s*[,)])/g, '$1$2');
-  // Remove return type annotations: ): Type => or ): Type {
-  cleanCode = cleanCode.replace(/\)\s*:\s*[\w<>[\]|&\s]+(?=\s*[{=])/g, ')');
-  
-  // Remove interface/type declarations (multi-line)
-  cleanCode = cleanCode.replace(/^interface\s+\w+\s*\{[\s\S]*?\}\s*$/gm, '');
-  cleanCode = cleanCode.replace(/^type\s+\w+\s*=[\s\S]*?;\s*$/gm, '');
-  
-  cleanCode = cleanCode.trim();
-  
-  // If the code is already JSX (starts with <), return it directly
-  if (cleanCode.startsWith('<')) {
-    return cleanCode;
-  }
-  
-  // Check if the entire code is a function component that we can render
-  // Pattern: const Name = () => { ... return (...) } or function Name() { ... return (...) }
-  const functionComponentMatch = cleanCode.match(
-    /^(?:const|let|var)\s+(\w+)\s*=\s*(?:\([^)]*\)|[^=]*)?\s*=>\s*\{[\s\S]*?return\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*\}\s*;?\s*$/
-  ) || cleanCode.match(
-    /^function\s+(\w+)\s*\([^)]*\)\s*\{[\s\S]*?return\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*\}\s*$/
-  );
-  
-  if (functionComponentMatch && functionComponentMatch[2]) {
-    const jsxContent = functionComponentMatch[2].trim();
-    if (jsxContent.startsWith('<')) {
-      return jsxContent;
-    }
-  }
-  
-  // Try to find return statement with JSX
-  const returnMatch = cleanCode.match(/return\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*\}?\s*;?\s*$/);
-  if (returnMatch && returnMatch[1]) {
-    const jsxContent = returnMatch[1].trim();
-    if (jsxContent.startsWith('<')) {
-      return jsxContent;
-    }
-  }
-  
-  // Handle arrow function that returns JSX directly: () => <Component />
-  const arrowJsxMatch = cleanCode.match(/=>\s*(<[\s\S]+>)\s*;?\s*$/);
-  if (arrowJsxMatch && arrowJsxMatch[1]) {
-    return arrowJsxMatch[1].trim();
-  }
-  
-  // If wrapped in parentheses, extract content
-  const parenMatch = cleanCode.match(/^\(\s*([\s\S]*?)\s*\)$/);
-  if (parenMatch && parenMatch[1]?.trim().startsWith('<')) {
-    return parenMatch[1].trim();
-  }
-  
-  // For plain JavaScript without JSX, wrap it in a render function
-  // This handles console.log, variable declarations, etc.
-  if (!cleanCode.includes('<') && !cleanCode.includes('return')) {
-    // It's pure JS - create a display for it
-    const escapedCode = cleanCode.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    return `<div className="p-4 font-mono text-sm bg-muted rounded-lg">
-      <div className="text-muted-foreground text-xs mb-2">JavaScript Output:</div>
-      <pre className="text-foreground whitespace-pre-wrap">${escapedCode}</pre>
-    </div>`;
-  }
-  
-  // Look for any JSX element in the code
-  const jsxMatch = cleanCode.match(/(<[A-Z][a-zA-Z]*[\s\S]*?>[\s\S]*?<\/[A-Z][a-zA-Z]*>|<[a-z][a-zA-Z]*[\s\S]*?\/>|<[a-z][a-zA-Z]*[\s\S]*?>[\s\S]*?<\/[a-z][a-zA-Z]*>)/);
-  if (jsxMatch) {
-    return jsxMatch[1];
-  }
-  
-  // Fallback: display the code as text
-  const escapedFallback = cleanCode.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-  return `<div className="p-4 font-mono text-sm text-foreground"><pre>${escapedFallback}</pre></div>`;
 };
 
 // Check if language is a backend/non-web language that can't be previewed in browser
