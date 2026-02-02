@@ -7,6 +7,12 @@
 const escapeForTemplateLiteral = (value: string) =>
   value.replace(/`/g, "\\`").replace(/\$/g, "\\$");
 
+const stripParamTypes = (params: string) => {
+  // Remove `: Type` inside parameter lists.
+  // We intentionally keep this conservative to avoid corrupting JS expressions.
+  return params.replace(/:\s*[^,)=]+(?=\s*(?:,|\)|=))/g, "");
+};
+
 const stripTsSyntax = (input: string) => {
   let code = input;
 
@@ -21,13 +27,19 @@ const stripTsSyntax = (input: string) => {
     "$1"
   );
 
-  // Remove function param type annotations: (props: Type, x: string)
-  // Handles unions / generics broadly by stripping until , or )
-  code = code.replace(/\(([^)]*)\)/g, (match) => {
-    // Avoid touching empty params
-    if (match === "()") return match;
-    return match.replace(/:\s*[^,)]+(?=[,)])/g, "");
+  // Remove function param type annotations ONLY in parameter lists
+  // - function foo(a: string, b: number) {}
+  // - (a: string, b: number) => {}
+  code = code.replace(/\bfunction\s+([\w$]+)\s*\(([^)]*)\)/g, (_m, name, params) => {
+    return `function ${name}(${stripParamTypes(params)})`;
   });
+
+  code = code.replace(/\(([^)]*)\)\s*=>/g, (_m, params) => {
+    return `(${stripParamTypes(params)}) =>`;
+  });
+
+  // Single-parameter arrow functions: x: Foo =>
+  code = code.replace(/(^|[=(,]\s*)([A-Za-z_$][\w$]*)\s*:\s*[^=,)]+(?=\s*=>)/g, "$1$2");
 
   // Remove return type annotations: ): Type => or ): Type {
   code = code.replace(/\)\s*:\s*[\w<>[\]|&\s,]+(?=\s*[{=])/g, ")");
@@ -50,6 +62,8 @@ const stripModuleSyntax = (input: string) => {
   code = code.replace(/^\s*import\s+['"][^'"]+['"];?\s*$/gm, "");
 
   // Remove export statements
+  // Remove `export default Identifier;` entirely (otherwise we leave `Identifier;` behind)
+  code = code.replace(/^\s*export\s+default\s+[A-Za-z_$][\w$]*\s*;?\s*$/gm, "");
   code = code.replace(/^\s*export\s*\*\s*from\s+['"][^'"]+['"];?\s*$/gm, "");
   code = code.replace(/^\s*export\s*\{[\s\S]*?\}\s*from\s+['"][^'"]+['"];?\s*$/gm, "");
   code = code.replace(/^\s*export\s*\{[\s\S]*?\}\s*;?\s*$/gm, "");
@@ -127,14 +141,14 @@ export const prepareCodeForLive = (rawCode: string): string => {
 
   // For plain JS without JSX, render it as output text
   if (!cleanCode.includes("<") && !cleanCode.includes("return")) {
-    const escaped = escapeForTemplateLiteral(cleanCode);
+    const asLiteral = JSON.stringify(cleanCode);
     return `<div className="p-4 font-mono text-sm bg-muted rounded-lg">
       <div className="text-muted-foreground text-xs mb-2">JavaScript Output:</div>
-      <pre className="text-foreground whitespace-pre-wrap">${escaped}</pre>
+      <pre className="text-foreground whitespace-pre-wrap">{${asLiteral}}</pre>
     </div>`;
   }
 
   // Fallback: show code as text to avoid crashing react-live with syntax errors
-  const escapedFallback = escapeForTemplateLiteral(cleanCode);
-  return `<div className="p-4 font-mono text-sm text-foreground"><pre>${escapedFallback}</pre></div>`;
+  const asLiteral = JSON.stringify(cleanCode);
+  return `<div className="p-4 font-mono text-sm text-foreground"><pre>{${asLiteral}}</pre></div>`;
 };
