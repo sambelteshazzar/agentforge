@@ -1,19 +1,11 @@
-import * as React from "react";
 import { useState, useEffect, useRef } from "react";
-import * as LucideIcons from "lucide-react";
-import { Bot, User, Sparkles, CheckCircle2, Code2, Loader2, Eye, Copy, Check, AlertCircle, Maximize2 } from "lucide-react";
+import { Bot, User, CheckCircle2, Code2, Loader2, Eye, Copy, Check, Maximize2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LiveProvider, LivePreview as ReactLivePreview, LiveError } from "react-live";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { EnhancedLivePreview } from "@/components/EnhancedLivePreview";
-import { prepareCodeForLive } from "@/lib/preview/prepareCodeForLive";
+import { prepareCodeForLive, isBackendLanguage, isWebPreviewable, getLanguageInfo } from "@/lib/preview";
+import { livePreviewScope, BackendCodePanel, NonPreviewablePanel } from "@/components/preview";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -27,117 +19,18 @@ interface PrototypePreviewProps {
   roomId?: string;
 }
 
-// Scope with common React patterns and UI components for live preview
-const liveScope = {
-  React,
-  ...LucideIcons,
-  useState,
-  useEffect,
-  useRef,
-
-  // Common UI components (so generated snippets render without imports)
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-  Input,
-  Textarea,
-  Label,
-  Badge,
-  Separator,
-
-  // Common icons
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
-  Eye,
-  Code2,
-  // Allow className utility
-  cn,
-};
-
-// Check if language is a backend/non-web language that can't be previewed in browser
-const isBackendLanguage = (lang: string): boolean => {
-  const backendLangs = ['python', 'py', 'java', 'c', 'cpp', 'c++', 'csharp', 'cs', 'go', 'rust', 'ruby', 'php', 'swift', 'kotlin'];
-  return backendLangs.includes(lang.toLowerCase());
-};
-
-// Check if language is a web/React language that can be live-previewed
-const isWebPreviewable = (lang: string): boolean => {
-  const webLangs = ['jsx', 'tsx', 'js', 'javascript', 'ts', 'typescript', 'react', 'html'];
-  return webLangs.includes(lang.toLowerCase());
-};
-
-// Get friendly language name and run instructions
-const getLanguageInfo = (lang: string): { name: string; runCommand: string; icon: string } => {
-  const langMap: Record<string, { name: string; runCommand: string; icon: string }> = {
-    python: { name: 'Python', runCommand: 'python filename.py', icon: '🐍' },
-    py: { name: 'Python', runCommand: 'python filename.py', icon: '🐍' },
-    java: { name: 'Java', runCommand: 'javac filename.java && java ClassName', icon: '☕' },
-    c: { name: 'C', runCommand: 'gcc filename.c -o output && ./output', icon: '⚙️' },
-    cpp: { name: 'C++', runCommand: 'g++ filename.cpp -o output && ./output', icon: '⚙️' },
-    'c++': { name: 'C++', runCommand: 'g++ filename.cpp -o output && ./output', icon: '⚙️' },
-    go: { name: 'Go', runCommand: 'go run filename.go', icon: '🔵' },
-    rust: { name: 'Rust', runCommand: 'cargo run', icon: '🦀' },
-    ruby: { name: 'Ruby', runCommand: 'ruby filename.rb', icon: '💎' },
-    php: { name: 'PHP', runCommand: 'php filename.php', icon: '🐘' },
-  };
-  return langMap[lang.toLowerCase()] || { name: lang.toUpperCase(), runCommand: `Run the ${lang} file locally`, icon: '📄' };
-};
-
 // Live Preview Component for React/TSX code using react-live
 const LivePreview = ({ code, language }: { code: string; language: string }) => {
   const lang = language.toLowerCase();
   
   // For backend languages, show a helpful "run locally" message
   if (isBackendLanguage(lang)) {
-    const langInfo = getLanguageInfo(lang);
-    return (
-      <div className="bg-gradient-to-br from-secondary to-secondary/50 rounded-xl p-6 border border-border">
-        <div className="text-center space-y-4">
-          <div className="text-4xl">{langInfo.icon}</div>
-          <div>
-            <h3 className="font-semibold text-foreground mb-1">{langInfo.name} Code Generated</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              This is {langInfo.name} code that runs on your local machine, not in the browser.
-            </p>
-          </div>
-          <div className="bg-background/80 rounded-lg p-4 text-left">
-            <p className="text-xs text-muted-foreground mb-2">To run this code:</p>
-            <ol className="text-sm space-y-2 text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0">1</span>
-                <span>Copy the code using the copy button above</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0">2</span>
-                <span>Save it to a file on your computer</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs flex-shrink-0">3</span>
-                <span>Run: <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono">{langInfo.runCommand}</code></span>
-              </li>
-            </ol>
-          </div>
-        </div>
-      </div>
-    );
+    return <BackendCodePanel language={lang} />;
   }
 
   // For non-web languages, show generic message
   if (!isWebPreviewable(lang)) {
-    return (
-      <div className="bg-secondary rounded-xl p-6 border border-border">
-        <div className="text-center text-muted-foreground">
-          <Code2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Live preview available for React/JSX code only</p>
-          <p className="text-xs mt-1">Copy the code and run it in your local environment</p>
-        </div>
-      </div>
-    );
+    return <NonPreviewablePanel />;
   }
 
   const preparedCode = prepareCodeForLive(code);
@@ -148,7 +41,7 @@ const LivePreview = ({ code, language }: { code: string; language: string }) => 
         <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
         <span className="text-xs font-medium text-muted-foreground">Live Preview</span>
       </div>
-      <LiveProvider code={preparedCode} scope={liveScope} noInline={false}>
+      <LiveProvider code={preparedCode} scope={livePreviewScope} noInline={false}>
         <div className="p-4 min-h-[100px] bg-background">
           <ReactLivePreview />
         </div>
