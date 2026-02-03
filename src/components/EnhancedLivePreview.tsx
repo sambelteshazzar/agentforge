@@ -1,19 +1,12 @@
-import * as React from "react";
 import { useState, useEffect, useRef } from "react";
-import * as LucideIcons from "lucide-react";
-import { Code2, Copy, Check, X, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
+import { Code2, Copy, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LiveProvider, LivePreview as ReactLivePreview, LiveError } from "react-live";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { PreviewControls, DevicePreset, ViewMode, devicePresets } from "@/components/PreviewControls";
-import { prepareCodeForLive } from "@/lib/preview/prepareCodeForLive";
+import { prepareCodeForLive } from "@/lib/preview";
+import { livePreviewScope, NonPreviewablePanel } from "@/components/preview";
 import Prism from "prismjs";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-jsx";
@@ -24,31 +17,6 @@ interface EnhancedLivePreviewProps {
   language: string;
   onClose?: () => void;
 }
-
-// Scope with common React patterns and UI components for live preview
-const liveScope = {
-  React,
-  ...LucideIcons,
-  useState,
-  useEffect,
-  useRef,
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-  Input,
-  Textarea,
-  Label,
-  Badge,
-  Separator,
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
-  cn,
-};
 
 // Code panel component
 const CodePanel = ({ code, language }: { code: string; language: string }) => {
@@ -156,7 +124,7 @@ const PreviewPanel = ({
               : undefined
           }
         >
-          <LiveProvider code={preparedCode} scope={liveScope} noInline={false}>
+          <LiveProvider code={preparedCode} scope={livePreviewScope} noInline={false}>
             <div className="p-4">
               <ReactLivePreview />
             </div>
