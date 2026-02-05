@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Terminal, Mail, Lock, Loader2, Sparkles, ArrowLeft, Check, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+ import { lovable } from "@/integrations/lovable";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -52,11 +53,8 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        },
+       const { error } = await lovable.auth.signInWithOAuth("google", {
+         redirect_uri: window.location.origin,
       });
       if (error) throw error;
     } catch (error) {
